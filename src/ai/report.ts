@@ -115,7 +115,7 @@ export async function writeNotes(s: Summary, allowCloud: boolean, onDownload?: (
   if (!allowCloud) await model.initializeDeviceModel(onDownload);
   const prompt = `${SYSTEM}\n\nPractice log:\n${JSON.stringify(promptData(s))}`;
   // on the device the first call may sit behind the model download, so it gets a long leash
-  const result = await withTimeout(model.generateContent(prompt), allowCloud ? 30_000 : 30 * 60_000, 'notes');
+  const result = await withTimeout(model.generateContent(prompt), allowCloud ? 90_000 : 30 * 60_000, 'notes');
   const notes = checkNotes(JSON.parse(result.response.text() || '{}'));
   if (!notes) throw new Error('Mibo could not write the notes this time. Try again.');
   // report what actually ran, not what was asked for

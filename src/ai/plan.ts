@@ -38,21 +38,34 @@ const SCHEMA = Schema.object({
   },
 });
 
-let model: GenerativeModel | null = null;
-function planModel(): GenerativeModel {
-  model ??= getGenerativeModel(miboAI(), {
-    model: MODELS.plan,
+const models: Record<string, GenerativeModel> = {};
+function planModel(name: string): GenerativeModel {
+  models[name] ??= getGenerativeModel(miboAI(), {
+    model: name,
     systemInstruction: SYSTEM,
     generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA },
   });
-  return model;
+  return models[name];
 }
 
 /** `bringBack`: words from the practice log the grown-up chose to practise again. */
 export async function generatePlan(topic: string, bringBack: string[] = []): Promise<LessonPlan> {
   if (!firebaseReady) throw new Error('Making lessons needs the Firebase setup (see the README).');
-  const result = await withTimeout(planModel().generateContent(JSON.stringify({ wordsToWorkOn: topic, ...(bringBack.length ? { bringBack } : {}) })), 30000, 'plan');
-  const plan = validatePlan(JSON.parse(result.response.text() || '{}'), topic);
-  if (!plan) throw new Error('Mibo could not dream up that lesson. Try different words.');
-  return plan;
+  const ask = JSON.stringify({ wordsToWorkOn: topic, ...(bringBack.length ? { bringBack } : {}) });
+  // The cloud models are sometimes busy or slow on the no-cost tier: try the big model twice, then the small one.
+  let last: unknown;
+  for (const name of [MODELS.plan, MODELS.plan, MODELS.small]) {
+    try {
+      const result = await withTimeout(planModel(name).generateContent(ask), 60_000, 'plan');
+      const plan = validatePlan(JSON.parse(result.response.text() || '{}'), topic);
+      if (plan) return plan;
+      last = new Error('Mibo could not dream up that lesson. Try different words.');
+    } catch (e) {
+      last = e;
+      const status = (e as { customErrorData?: { status?: number } }).customErrorData?.status;
+      if (status === 401 || status === 403) break;   // App Check or API setup: retrying will not help
+      console.warn(`[plan] ${name} failed, trying again:`, (e as Error).message);
+    }
+  }
+  throw last instanceof Error ? last : new Error('plan failed');
 }

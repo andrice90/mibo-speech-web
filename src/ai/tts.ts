@@ -51,7 +51,7 @@ async function slot<T>(run: () => Promise<T>): Promise<T> {
 }
 
 async function synth(prompt: string): Promise<{ pcm: Uint8Array; sr: number }> {
-  const result = await withTimeout(ttsModel().generateContent(prompt), 30000, 'voice');
+  const result = await withTimeout(ttsModel().generateContent(prompt), 60_000, 'voice');
   const part = result.response.inlineDataParts()?.[0]?.inlineData;
   if (!part?.data) throw new Error('no audio in the reply');
   let pcm = fromBase64(part.data);
