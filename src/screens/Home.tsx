@@ -32,6 +32,14 @@ export function Home() {
   return (
     <div className="screen">
       <Column>
+        {setup === 'done' && (
+          <div className="top-right">
+            <button type="button" className="zone-btn" onClick={() => go('parent')}>
+              <span className="lock">🔒</span>
+              <span><b>Grown-up Zone</b><small>New lessons, progress reports</small></span>
+            </button>
+          </div>
+        )}
         <div className="hero">
           <div className="mini"><MiboStage puppet={puppet} /></div>
           <div>
@@ -69,7 +77,6 @@ export function Home() {
                   <span className="go" style={{ color: C.roseDeep }}>Play</span>
                 </button>
               ))}
-              <button type="button" className="grownups" onClick={() => go('parent')}>🔒 Grown-ups</button>
             </>
           )}
         </div></div>
