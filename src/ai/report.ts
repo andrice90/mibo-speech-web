@@ -17,7 +17,7 @@ import { getGenerativeModel, InferenceMode, InferenceSource, Schema, type Genera
 
 import type { Summary } from '../lesson/results';
 import { DEVICE_TEXT } from './device';
-import { firebaseReady, miboAI, MODELS, withTimeout } from './firebase';
+import { firebaseReady, miboAI, MODELS, withRetry, withTimeout } from './firebase';
 
 export type Notes = {
   headline: string; goingWell: string[]; trickySpots: string[]; focusNext: string[]; tip: string; lessonIdeas: string[];
@@ -115,7 +115,9 @@ export async function writeNotes(s: Summary, allowCloud: boolean, onDownload?: (
   if (!allowCloud) await model.initializeDeviceModel(onDownload);
   const prompt = `${SYSTEM}\n\nPractice log:\n${JSON.stringify(promptData(s))}`;
   // on the device the first call may sit behind the model download, so it gets a long leash
-  const result = await withTimeout(model.generateContent(prompt), allowCloud ? 90_000 : 30 * 60_000, 'notes');
+  const result = allowCloud
+    ? await withRetry('notes', () => withTimeout(model.generateContent(prompt), 60_000, 'notes'))
+    : await withTimeout(model.generateContent(prompt), 30 * 60_000, 'notes');
   const notes = checkNotes(JSON.parse(result.response.text() || '{}'));
   if (!notes) throw new Error('Mibo could not write the notes this time. Try again.');
   // report what actually ran, not what was asked for

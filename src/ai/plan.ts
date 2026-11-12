@@ -12,7 +12,7 @@
 import { getGenerativeModel, Schema, type GenerativeModel } from 'firebase/ai';
 
 import { validatePlan, type LessonPlan } from '../lesson/plan';
-import { firebaseReady, miboAI, MODELS, withTimeout } from './firebase';
+import { firebaseReady, miboAI, MODELS, withRetry, withTimeout } from './firebase';
 
 const SYSTEM = `You design ONE short speech-practice lesson for Mibo, a friendly cartoon practice buddy for children aged 4-7, supervised by a grown-up. The grown-up describes the kind of words to work on. This is playful educational practice: never mention diagnosis, therapy, treatment, disorders, or that any word is hard for a particular child.
 
@@ -52,20 +52,12 @@ function planModel(name: string): GenerativeModel {
 export async function generatePlan(topic: string, bringBack: string[] = []): Promise<LessonPlan> {
   if (!firebaseReady) throw new Error('Making lessons needs the Firebase setup (see the README).');
   const ask = JSON.stringify({ wordsToWorkOn: topic, ...(bringBack.length ? { bringBack } : {}) });
-  // The cloud models are sometimes busy or slow on the no-cost tier: try the big model twice, then the small one.
-  let last: unknown;
-  for (const name of [MODELS.plan, MODELS.plan, MODELS.small]) {
-    try {
-      const result = await withTimeout(planModel(name).generateContent(ask), 60_000, 'plan');
-      const plan = validatePlan(JSON.parse(result.response.text() || '{}'), topic);
-      if (plan) return plan;
-      last = new Error('Mibo could not dream up that lesson. Try different words.');
-    } catch (e) {
-      last = e;
-      const status = (e as { customErrorData?: { status?: number } }).customErrorData?.status;
-      if (status === 401 || status === 403) break;   // App Check or API setup: retrying will not help
-      console.warn(`[plan] ${name} failed, trying again:`, (e as Error).message);
-    }
-  }
-  throw last instanceof Error ? last : new Error('plan failed');
+  // The cloud models are often busy on the no-cost tier: alternate the big model and the small one across tries.
+  const order = [MODELS.plan, MODELS.small, MODELS.plan, MODELS.small, MODELS.plan];
+  return withRetry('plan', async attempt => {
+    const result = await withTimeout(planModel(order[attempt % order.length]).generateContent(ask), 60_000, 'plan');
+    const plan = validatePlan(JSON.parse(result.response.text() || '{}'), topic);
+    if (!plan) throw new Error('Mibo could not dream up that lesson. Try different words.');
+    return plan;
+  });
 }

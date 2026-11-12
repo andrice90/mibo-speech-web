@@ -12,7 +12,7 @@
 import { getGenerativeModel, ResponseModality, type GenerativeModel } from 'firebase/ai';
 
 import { pcm16ToFloat, pcmToWav, trimEdges, type Viseme } from '../voice/analyze';
-import { firebaseReady, miboAI, MODELS, withTimeout } from './firebase';
+import { firebaseReady, miboAI, MODELS, withRetry, withTimeout } from './firebase';
 
 export const VOICE = 'Leda';
 
@@ -62,31 +62,19 @@ async function synth(prompt: string): Promise<{ pcm: Uint8Array; sr: number }> {
 
 /**
  * Speaks one line in Mibo's voice. `note` adds a delivery direction for this
- * line only. Retries twice (the TTS model now and then answers with text
- * instead of audio) and waits out rate limits. Throws when the voice cannot be made.
+ * line only. Tries again when the model is busy, rate-limited, or answers
+ * with text instead of audio (it does now and then). Throws when the voice
+ * cannot be made.
  */
 export async function speak(text: string, opts: { note?: string; trim?: boolean } = {}): Promise<Speech> {
   if (!firebaseReady) throw new Error('Firebase is not configured');
   const prompt = `${PROFILE}\n[Director's Notes: ${NOTES}${opts.note ? ` ${opts.note}` : ''}]\n${text}`;
-  return slot(async () => {
-    let last: unknown;
-    for (let attempt = 0, waits = 0; attempt < 3;) {
-      try {
-        const got = await synth(prompt);
-        const pcm = opts.trim === false ? got.pcm : trimEdges(got.pcm, got.sr);
-        const samples = pcm16ToFloat(pcm);
-        // the aligner brings the pronouncing dictionary with it (4 MB), so it loads only when a voice line is made
-        const { mouthTrack } = await import('../voice/lipsync');
-        return { wav: pcmToWav(pcm, got.sr), samples, sr: got.sr, visemes: mouthTrack(text, samples, got.sr), seconds: samples.length / got.sr };
-      } catch (e) {
-        last = e;
-        const status = (e as { customErrorData?: { status?: number } }).customErrorData?.status;
-        if (status === 401 || status === 403) break;   // App Check or API setup: retrying will not help
-        // the free tier allows only so many voice lines a minute: wait and ask again (a lesson is made once, nobody is mid-lesson)
-        if (status === 429 && waits++ < 5) { await new Promise(r => setTimeout(r, 20_000)); continue; }
-        attempt++;
-      }
-    }
-    throw last instanceof Error ? last : new Error('voice failed');
-  });
+  return slot(() => withRetry('voice', async () => {
+    const got = await synth(prompt);
+    const pcm = opts.trim === false ? got.pcm : trimEdges(got.pcm, got.sr);
+    const samples = pcm16ToFloat(pcm);
+    // the aligner brings the pronouncing dictionary with it (4 MB), so it loads only when a voice line is made
+    const { mouthTrack } = await import('../voice/lipsync');
+    return { wav: pcmToWav(pcm, got.sr), samples, sr: got.sr, visemes: mouthTrack(text, samples, got.sr), seconds: samples.length / got.sr };
+  }));
 }

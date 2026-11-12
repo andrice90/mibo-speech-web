@@ -80,6 +80,29 @@ export function cloudError(e: unknown, fallback: string): string {
     return 'Firebase refused this device (App Check). If you are testing, register the debug token printed in the browser console, then try again.';
   }
   if (status === 429) return 'The free limit for the cloud has been reached for now. Wait a few minutes and try again.';
+  if ((status && status >= 500) || /high demand|overloaded|timed out/i.test(msg)) return 'Gemini is very busy right now and did not answer after several tries. Wait a minute and try again.';
   if (/^(Mibo could not|Making lessons needs|Mibo\'s notes need|This device is out of space)/.test(msg)) return msg;
   return fallback;
+}
+
+export const statusOf = (e: unknown) => (e as { customErrorData?: { status?: number } }).customErrorData?.status;
+const pause = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Runs a cloud call, trying again when the service is busy (5xx, "high
+ * demand", a timeout) or rate-limited (429), with growing pauses. `run`
+ * gets the attempt number so a caller can switch model between tries.
+ * Setup failures (401/403) are not retried.
+ */
+export async function withRetry<T>(what: string, run: (attempt: number) => Promise<T>, waits = [2000, 5000, 10000, 20000]): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await run(attempt);
+    } catch (e) {
+      const status = statusOf(e);
+      if (status === 401 || status === 403 || attempt >= waits.length) throw e;
+      console.warn(`[${what}] try ${attempt + 1} failed, trying again:`, (e as Error).message.slice(0, 160));
+      await pause(status === 429 ? Math.max(20000, waits[attempt]) : waits[attempt]);
+    }
+  }
 }
