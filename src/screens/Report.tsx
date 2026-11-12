@@ -5,11 +5,15 @@ import { cloudError, firebaseReady } from '../ai/firebase';
 import { writeNotes, type Notes } from '../ai/report';
 import { allResults, clearResults, summarise, wordsToBringBack } from '../lesson/results';
 import { go } from '../lib/router';
-import { readJson, writeJson } from '../lib/store';
-import { Bubble, Card, Column, Dialog, HomeButton, Spinner } from '../ui/kit';
+import { loadNotes, saveNotes } from '../lesson/notes';
+import { Bubble, Card, Column, Dialog, HomeButton } from '../ui/kit';
+import { Working } from '../ui/Working';
 import { C, SOUND } from '../ui/theme';
 
-const KEY = 'mibo-notes-v2';
+const NOTING = [
+  'Mibo is reading the practice log…', 'Spotting what went well…', 'Looking for the tricky bits…',
+  'Thinking about what to try next…', 'Dreaming up lesson ideas…',
+];
 const pct = (n: number, of: number) => `${of ? (100 * n) / of : 0}%`;
 
 /**
@@ -25,7 +29,7 @@ export function Report() {
   const [results, setResults] = useState(allResults);
   const sum = useMemo(() => summarise(results), [results]);
   const [device, setDevice] = useState<DeviceAi | null>(null);
-  const [notes, setNotes] = useState<Notes | null>(() => readJson<Notes | null>(KEY, null));
+  const [notes, setNotes] = useState<Notes | null>(loadNotes);
   const [busy, setBusy] = useState<'device' | 'cloud' | null>(null);
   const bringBack = useMemo(() => wordsToBringBack(sum), [sum]);
   const goHome = () => go('parent', {}, { replace: true });
@@ -41,7 +45,7 @@ export function Report() {
     setAskCloud(false); setBusy(where); setError(''); setDownload(null);
     try {
       const n = await writeNotes(sum, where === 'cloud', f => setDownload(f));
-      setNotes(n); writeJson(KEY, n);
+      setNotes(n); saveNotes(n);
     } catch (e) {
       console.warn('[notes]', e);
       setError(where === 'device' && !/^Mibo/.test((e as Error).message)
@@ -136,15 +140,11 @@ export function Report() {
                   </>
                 )}
                 {busy && (
-                  <div className="stack center" style={{ padding: '8px 0' }}>
-                    <Spinner />
-                    <p className="soft">
-                      {busy === 'device'
-                        ? download !== null && download < 1 ? `Fetching the on-device model… ${Math.round(download * 100)}%` : 'Mibo is reading the practice log on this device…'
-                        : 'Mibo is writing the notes in the cloud…'}
-                    </p>
-                    {busy === 'device' && download !== null && download < 1 && <div className="progress"><i style={{ width: `${download * 100}%` }} /></div>}
-                  </div>
+                  <Working title={busy === 'device' ? 'Reading the practice log on this device' : 'Writing the notes in the cloud'}
+                    messages={busy === 'device' && download !== null && download < 1
+                      ? [`Fetching the on-device model… ${Math.round(download * 100)}%`, 'This is a big one-time download.', 'Nothing about your child is being sent.']
+                      : NOTING}
+                    progress={busy === 'device' && download !== null && download < 1 ? download * 0.8 : undefined} estimate={busy === 'device' ? 25 : 15} />
                 )}
                 {!!error && <p className="err">{error}</p>}
                 {!busy && !firebaseReady && <p className="err">This build has no Firebase setup yet, so Mibo cannot write notes (see the README).</p>}
@@ -197,7 +197,7 @@ export function Report() {
             <p>{"The record of words practised and Mibo's notes will be removed from this device. Lessons and names stay."}</p>
             <div className="row">
               <Bubble label="Clear it" bg={C.rose} deep={C.roseDeep}
-                onPress={() => { clearResults(); writeJson(KEY, null); setNotes(null); setResults([]); setAskClear(false); }} />
+                onPress={() => { clearResults(); saveNotes(null); setNotes(null); setResults([]); setAskClear(false); }} />
             </div>
             <div className="row"><Bubble small label="Keep it" bg={C.mint} deep={C.mintDeep} onPress={() => setAskClear(false)} /></div>
           </Dialog>

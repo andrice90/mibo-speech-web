@@ -7,11 +7,20 @@ import { newLessonId, saveCustomLesson, type CustomLesson } from '../lesson/cust
 import { clipTexts, TOPIC_MAX, validTopic, type LessonPlan } from '../lesson/plan';
 import { go } from '../lib/router';
 import { deleteAudio, putAudio } from '../lib/store';
-import { Bubble, Card, Column, HomeButton, Spinner } from '../ui/kit';
+import { Bubble, Card, Column, HomeButton } from '../ui/kit';
+import { Working } from '../ui/Working';
 import { C } from '../ui/theme';
 import { makeTemplate, type Templates } from '../voice/wordcheck';
 
 type Stage = 'ask' | 'planning' | 'review' | 'voicing' | 'error';
+const PLANNING = [
+  'Mibo is picking the words…', 'Finding a picture for each one…', 'Thinking up a silly warm-up…',
+  'Writing a cheer for every word…', 'Making a listening game…', 'Checking it is all kid-friendly…',
+];
+const VOICING = [
+  'Mibo is warming up his voice…', 'Saying each word nice and slowly…', 'Recording a cheer for every word…',
+  'Working out how his mouth moves…', 'Listening back to each line…', 'Saving the lesson on this device…',
+];
 const EXAMPLES = ['S words about animals', 'Food words', 'Sh words about the sea', 'Words about vehicles', 'Z words at the zoo'];
 
 /**
@@ -97,7 +106,14 @@ export function Create({ params }: { params: Record<string, string> }) {
             page is sent, and nothing is made until you say yes.
           </p>
 
-          {(stage === 'ask' || stage === 'error' || stage === 'planning') && (
+          {stage === 'planning' && (
+            <Card><Working title={`Planning “${topic}”`} messages={PLANNING} estimate={18} /></Card>
+          )}
+          {stage === 'voicing' && plan && (
+            <Card><Working title={`Giving “${plan.title}” its voice`} messages={VOICING} progress={lines ? voiced / lines : 0} estimate={40} /></Card>
+          )}
+
+          {(stage === 'ask' || stage === 'error') && (
             <Card className="stack">
               <h2>What words shall we practise?</h2>
               <input className="input" value={topic} onChange={e => setTopic(e.target.value)} maxLength={TOPIC_MAX}
@@ -120,15 +136,14 @@ export function Create({ params }: { params: Record<string, string> }) {
               {stage === 'error' && <p className="err">{error}</p>}
               {!firebaseReady && <p className="err">This build has no Firebase setup yet, so new lessons cannot be made (see the README).</p>}
               <div className="row">
-                <Bubble label={stage === 'planning' ? 'Mibo is thinking…' : 'Make my lesson plan'} bg={C.mint} deep={C.mintDeep}
-                  disabled={!validTopic(topic) || stage === 'planning' || !firebaseReady} onPress={() => void makePlan(topic)} />
+                <Bubble label="Make my lesson plan" bg={C.mint} deep={C.mintDeep}
+                  disabled={!validTopic(topic) || !firebaseReady} onPress={() => void makePlan(topic)} />
               </div>
-              {stage === 'planning' && <Spinner />}
               <p className="note">Mibo is a practice buddy, not a speech therapist. Made lessons are AI-written: please check the words before playing.</p>
             </Card>
           )}
 
-          {(stage === 'review' || stage === 'voicing') && plan && (
+          {stage === 'review' && plan && (
             <Card className="stack">
               <div className="plan-emoji">{plan.emoji}</div>
               <h2 className="center">{plan.title}</h2>
@@ -142,16 +157,14 @@ export function Create({ params }: { params: Record<string, string> }) {
               <p className="plan-line">“{plan.byeLine}”</p>
               {!!error && <p className="err">{error}</p>}
               <div className="row">
-                <Bubble label={stage === 'voicing' ? `Making Mibo's voice… ${voiced}/${lines}` : 'Yes, make the voice'} bg={C.mint} deep={C.mintDeep}
-                  disabled={stage === 'voicing'} onPress={() => void accept()} />
+                <Bubble label="Yes, make the voice" bg={C.mint} deep={C.mintDeep} onPress={() => void accept()} />
               </div>
-              {stage === 'voicing' && <><Spinner /><p className="note center">This can take a minute or two. Stay on this page.</p></>}
               <div className="row">
-                <Bubble small label="Try different words" bg={C.peach} deep={C.peachDeep} disabled={stage === 'voicing'}
+                <Bubble small label="Try different words" bg={C.peach} deep={C.peachDeep}
                   onPress={() => { setStage('ask'); setPlan(null); }} />
               </div>
               <div className="row">
-                <Bubble small label="Re-roll this plan" bg={C.lavender} deep={C.lavenderDeep} disabled={stage === 'voicing'}
+                <Bubble small label="Re-roll this plan" bg={C.lavender} deep={C.lavenderDeep}
                   onPress={() => void makePlan(topic)} />
               </div>
             </Card>

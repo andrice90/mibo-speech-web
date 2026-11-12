@@ -88,6 +88,13 @@ export function cloudError(e: unknown, fallback: string): string {
 export const statusOf = (e: unknown) => (e as { customErrorData?: { status?: number } }).customErrorData?.status;
 const pause = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+const busyListeners = new Set<() => void>();
+/** Tells a waiting screen each time a cloud call had to be tried again. Returns the unsubscribe. */
+export function onCloudBusy(f: () => void): () => void {
+  busyListeners.add(f);
+  return () => { busyListeners.delete(f); };
+}
+
 /**
  * Runs a cloud call, trying again when the service is busy (5xx, "high
  * demand", a timeout) or rate-limited (429), with growing pauses. `run`
@@ -102,6 +109,7 @@ export async function withRetry<T>(what: string, run: (attempt: number) => Promi
       const status = statusOf(e);
       if (status === 401 || status === 403 || attempt >= waits.length) throw e;
       console.warn(`[${what}] try ${attempt + 1} failed, trying again:`, (e as Error).message.slice(0, 160));
+      busyListeners.forEach(f => f());
       await pause(status === 429 ? Math.max(20000, waits[attempt]) : waits[attempt]);
     }
   }

@@ -1,105 +1,148 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { DEVICE_LABEL, deviceAiStatus, type DeviceAi } from '../ai/device';
 import { firebaseReady } from '../ai/firebase';
 import { loadConsent, saveConsent } from '../lesson/consent';
 import { deleteCustomLesson, listCustomLessons, type CustomLesson } from '../lesson/custom';
-import { allResults } from '../lesson/results';
+import { loadNotes, practiceSinceNotes } from '../lesson/notes';
+import { allResults, summarise, wordsToBringBack } from '../lesson/results';
 import { go, goHome } from '../lib/router';
 import { lock, setPin, validPin } from '../lib/zone';
 import { Bubble, Card, Column, Dialog } from '../ui/kit';
 import { PinPad } from '../ui/PinPad';
 import { C } from '../ui/theme';
 
+const ago = (at: number) => {
+  const days = Math.floor((Date.now() - at) / 86_400_000);
+  return days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+};
+
 /**
- * The grown-up zone: Mibo's notes (written on this device), new lessons
- * (planned and voiced in the cloud), and the settings. "My child is ready"
- * locks the zone and hands the device back to the child.
+ * The grown-up zone, as a dashboard: practice at a glance, whether there is
+ * new practice Mibo has not written notes on yet, the lesson his notes
+ * suggest next, and the lessons already made. Settings sit behind the gear.
+ * "My child is ready" locks the zone and hands the device back.
  */
 export function Parent() {
   const [made, setMade] = useState<CustomLesson[]>(listCustomLessons);
   const [del, setDel] = useState<CustomLesson | null>(null);
+  const [settings, setSettings] = useState(false);
   const [hear, setHear] = useState(() => loadConsent()?.hear ?? true);
   const [device, setDevice] = useState<DeviceAi | null>(null);
   const [newPin, setNewPin] = useState<null | { first: string }>(null);
   const [pinSaved, setPinSaved] = useState(false);
-  const practised = allResults().length;
+
+  const sum = useMemo(() => summarise(allResults()), []);
+  const notes = useMemo(loadNotes, []);
+  const pending = useMemo(() => practiceSinceNotes(notes), [notes]);
+  const bringBack = useMemo(() => wordsToBringBack(sum), [sum]);
+  const said = sum.sounds.reduce((n, s) => n + s.words, 0), first = sum.sounds.reduce((n, s) => n + s.firstTry, 0);
 
   useEffect(() => { void deviceAiStatus().then(setDevice); }, []);
+
+  const plan = (topic?: string) => go('create', { ...(topic ? { topic } : {}), ...(topic && bringBack.length ? { bringBack: bringBack.join(',') } : {}) });
+  const idea = notes?.lessonIdeas[0];
 
   return (
     <div className="screen">
       <Column>
         <div className="zone-bar">
           <h1>Grown-up zone</h1>
+          <button type="button" className="home-btn" onClick={() => { setPinSaved(false); setSettings(true); }} aria-label="Settings">⚙️</button>
         </div>
         <div className="scroll"><div className="list">
           <div className="row"><Bubble label="My child is ready ▶" bg={C.mint} deep={C.mintDeep} onPress={() => { lock(); goHome(); }} /></div>
 
-          <button type="button" className="lesson" style={{ backgroundColor: '#f1ecff', borderColor: C.lavenderDeep }} onClick={() => go('report')}>
-            <span className="badge">📒</span>
-            <span className="text">
-              <span className="title" style={{ color: C.lavenderDeep }}>{"Mibo's notes"}</span>
-              <span className="subtitle">How practice is going and what to focus on next</span>
-              <span className="meta">{practised ? `${practised} word${practised === 1 ? '' : 's'} and games in the practice log` : 'Nothing practised yet'}</span>
-            </span>
-            <span className="go" style={{ color: C.lavenderDeep }}>Read</span>
-          </button>
-          <button type="button" className="lesson" style={{ backgroundColor: '#ffeef4', borderColor: C.roseDeep }} onClick={() => go('create')}>
-            <span className="badge">✨</span>
-            <span className="text">
-              <span className="title" style={{ color: C.roseDeep }}>Make a new lesson</span>
-              <span className="subtitle">Choose the words; Mibo plans and voices it</span>
-            </span>
-            <span className="go" style={{ color: C.roseDeep }}>Make</span>
-          </button>
+          <div className="tiles">
+            <div className="tile"><b>{sum.total}</b><span>words and games practised</span></div>
+            <div className="tile"><b>{said ? `${Math.round((100 * first) / said)}%` : '–'}</b><span>said right first try</span></div>
+            <div className="tile"><b>{sum.days}</b><span>{sum.days === 1 ? 'day of practice' : 'days of practice'}</span></div>
+          </div>
+
+          <Card className="stack dash">
+            <div className="dash-head">
+              <h2>📒 {"Mibo's notes"}</h2>
+              {sum.total > 0 && pending > 0 && <span className="badge-new">{notes ? `${pending} new since last notes` : 'New practice to read'}</span>}
+              {notes && pending === 0 && <span className="badge-ok">Up to date</span>}
+            </div>
+            {sum.total === 0 ? (
+              <p className="soft">Nothing practised yet. After a lesson, Mibo can write up how it went and what to focus on next.</p>
+            ) : notes ? (
+              <>
+                <p className="dash-quote">{notes.headline}</p>
+                <p className="note">{`Written ${ago(notes.at)}, ${notes.where === 'device' ? 'on this device' : 'in the cloud'}.`}</p>
+              </>
+            ) : (
+              <p className="soft">Mibo has not written any notes yet. He reads the practice log and tells you what went well, where it was tricky, and what to focus on next.</p>
+            )}
+            {sum.total > 0 && (
+              <div className="row">
+                <Bubble small label={!notes ? "Write Mibo's notes" : pending > 0 ? 'Read and update the notes' : 'Read the notes'}
+                  bg={C.lavender} deep={C.lavenderDeep} onPress={() => go('report')} />
+              </div>
+            )}
+          </Card>
+
+          <Card className="stack dash">
+            <div className="dash-head"><h2>✨ Next lesson</h2></div>
+            {idea ? (
+              <>
+                <p className="soft">From his notes, Mibo suggests:</p>
+                <p className="dash-quote">{idea}</p>
+                {bringBack.length > 0 && <p className="note">{`Bringing back the words that took more goes: ${bringBack.join(', ')}.`}</p>}
+                <div className="row"><Bubble small label="Make this lesson" bg={C.rose} deep={C.roseDeep} onPress={() => plan(idea)} /></div>
+                {notes!.lessonIdeas.length > 1 && (
+                  <div className="chips">
+                    {notes!.lessonIdeas.slice(1).map(x => <button key={x} type="button" className="idea" onClick={() => plan(x)}>✨ {x}</button>)}
+                  </div>
+                )}
+                <button type="button" className="skip" onClick={() => plan()}>Choose my own words</button>
+              </>
+            ) : (
+              <>
+                <p className="soft">
+                  {sum.total > 0 ? "Once Mibo has written his notes, he will suggest a lesson that fits. Or choose the words yourself." : 'Choose the words; Mibo plans the lesson and gives it his voice.'}
+                </p>
+                <div className="row"><Bubble small label="Make a new lesson" bg={C.rose} deep={C.roseDeep} onPress={() => plan()} /></div>
+              </>
+            )}
+          </Card>
 
           {made.length > 0 && (
-            <Card className="stack">
-              <h2>Lessons you made</h2>
+            <Card className="stack dash">
+              <div className="dash-head"><h2>Lessons you made</h2></div>
               {made.map(l => (
                 <div key={l.id} className="made-row">
                   <span style={{ fontSize: 28 }}>{l.plan.emoji}</span>
                   <span className="t"><b>{l.plan.title}</b><span>{l.plan.words.map(w => w.word).join(' · ')}</span></span>
-                  <button type="button" className="del" style={{ color: C.roseDeep, fontWeight: 700, fontSize: 24 }} onClick={() => setDel(l)} aria-label={`Delete ${l.plan.title}`}>×</button>
+                  <button type="button" style={{ color: C.roseDeep, fontWeight: 700, fontSize: 24, padding: '0 6px' }} onClick={() => setDel(l)} aria-label={`Delete ${l.plan.title}`}>×</button>
                 </div>
               ))}
             </Card>
           )}
+        </div></div>
 
-          <Card className="stack">
+        {settings && !newPin && (
+          <Dialog onClose={() => setSettings(false)}>
             <h2>Settings</h2>
             <button type="button" className="check mic" role="switch" aria-checked={hear} onClick={() => { saveConsent(!hear); setHear(!hear); }}>
               <span className={`box${hear ? ' on' : ''}`}>{hear && '✓'}</span>
               <span>🎤 Let Mibo listen (on this device only)</span>
             </button>
-            <div className="setting">
+            <div className="setting" style={{ alignSelf: 'stretch' }}>
               <span>{pinSaved ? 'PIN changed ✓' : 'Grown-up PIN'}</span>
               <button type="button" className="link" onClick={() => { setPinSaved(false); setNewPin({ first: '' }); }}>Change</button>
             </div>
-          </Card>
-
-          <p className="ai-status">
-            {!firebaseReady
-              ? <><b>Firebase is not set up in this build.</b> Lessons still play; notes and new lessons need it.</>
-              : device === null ? ' '
-              : device === 'unavailable'
-                ? <><b>☁️ {DEVICE_LABEL[device]}.</b> The practice log stays on this device unless you choose, each time, to let the cloud write the notes. New lessons are planned and voiced in the cloud.</>
-                : <><b>🔒 {DEVICE_LABEL[device]}.</b> Mibo reads the practice log and writes his notes on this device. New lessons are planned and voiced in the cloud.</>}
-            {' '}Lessons themselves use no AI.
-          </p>
-        </div></div>
-
-        {del && (
-          <Dialog onClose={() => setDel(null)}>
-            <div className="big">{del.plan.emoji}</div>
-            <h2>Delete this lesson?</h2>
-            <p>{`“${del.plan.title}” and Mibo's voice for it will be removed from this device.`}</p>
-            <div className="row">
-              <Bubble label="Delete lesson" bg={C.rose} deep={C.roseDeep}
-                onPress={() => { deleteCustomLesson(del.id); setDel(null); setMade(listCustomLessons()); }} />
-            </div>
-            <div className="row"><Bubble small label="Keep it" bg={C.mint} deep={C.mintDeep} onPress={() => setDel(null)} /></div>
+            <p className="note" style={{ textAlign: 'left', marginBottom: 0 }}>
+              {!firebaseReady
+                ? 'Firebase is not set up in this build. Lessons still play; notes and new lessons need it.'
+                : device === null ? ''
+                : device === 'unavailable'
+                  ? `☁️ ${DEVICE_LABEL[device]}. The practice log stays on this device unless you choose, each time, to let the cloud write the notes.`
+                  : `🔒 ${DEVICE_LABEL[device]}. Mibo reads the practice log and writes his notes on this device.`}
+              {' '}New lessons are planned and voiced in the cloud. Lessons themselves use no AI.
+            </p>
+            <div className="row"><Bubble small label="Done" bg={C.mint} deep={C.mintDeep} onPress={() => setSettings(false)} /></div>
           </Dialog>
         )}
         {newPin && (
@@ -110,6 +153,18 @@ export function Parent() {
                 if (pin !== newPin.first) { setNewPin({ first: '' }); return false; }
                 await setPin(pin); setNewPin(null); setPinSaved(true); return true;
               }} />
+          </Dialog>
+        )}
+        {del && (
+          <Dialog onClose={() => setDel(null)}>
+            <div className="big">{del.plan.emoji}</div>
+            <h2>Delete this lesson?</h2>
+            <p>{`“${del.plan.title}” and Mibo's voice for it will be removed from this device.`}</p>
+            <div className="row">
+              <Bubble label="Delete lesson" bg={C.rose} deep={C.roseDeep}
+                onPress={() => { deleteCustomLesson(del.id); setDel(null); setMade(listCustomLessons()); }} />
+            </div>
+            <div className="row"><Bubble small label="Keep it" bg={C.mint} deep={C.mintDeep} onPress={() => setDel(null)} /></div>
           </Dialog>
         )}
       </Column>
