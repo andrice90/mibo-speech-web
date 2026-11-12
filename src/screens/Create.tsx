@@ -101,8 +101,8 @@ export function Create({ params }: { params: Record<string, string> }) {
         <ZoneBar title="Make a new lesson" onBack={() => go('parent', {}, { replace: true })} />
         <div className="scroll"><div className="body">
           <p className="center soft" style={{ fontSize: 15, lineHeight: '21px' }}>
-            Tell Mibo what words to work on. Gemini writes a plan in the cloud for you to check. Only what you see on this
-            page is sent, and nothing is made until you say yes.
+            Tell Mibo what words to work on. Gemini writes a plan in the cloud, and you check it before Mibo records
+            his voice for it.
           </p>
 
           {stage === 'planning' && (
@@ -129,7 +129,7 @@ export function Create({ params }: { params: Record<string, string> }) {
                       <button key={w} type="button" className="idea" onClick={() => setBringBack(b => b.filter(x => x !== w))} aria-label={`Leave out ${w}`}>{w} ×</button>
                     ))}
                   </div>
-                  <p className="note">These words took more than one go. They will be sent with your topic so the new lesson includes them. Tap one to leave it out.</p>
+                  <p className="note">These words took more than one go, so the new lesson can give them another turn. Tap one to leave it out.</p>
                 </>
               )}
               {stage === 'error' && <p className="err">{error}</p>}

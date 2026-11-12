@@ -273,7 +273,9 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 /* ---- waiting on Mibo */
 .working { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 4px 0 6px; }
 .working-mibo { width: 132px; height: 132px; }
-.working .progress { width: 100%; height: 14px; border-radius: 7px; }
+.working-bar { display: flex; align-items: center; gap: 10px; width: 100%; }
+.working .progress { flex: 1; height: 14px; border-radius: 7px; }
+.working-detail { flex: none; min-width: 42px; text-align: right; font-weight: 700; font-size: 15px; color: var(--lavender-deep); font-variant-numeric: tabular-nums; }
 .working .progress i { border-radius: 7px; background: linear-gradient(90deg, var(--lavender-deep), #a58cf0); transition: width 400ms ease-out; }
 .working-line { font-weight: 600; font-size: 16px; color: var(--soft); min-height: 44px; animation: line-in 350ms ease-out; }
 @keyframes line-in { from { opacity: 0; transform: translateY(6px); } }

@@ -10,6 +10,10 @@ import { Bubble, Card, Column, Dialog, ZoneBar } from '../ui/kit';
 import { Working } from '../ui/Working';
 import { C, SOUND } from '../ui/theme';
 
+const DOWNLOADING = [
+  "Downloading this browser's built-in AI…", 'This only happens the first time.', 'It is a big download, so it can take a few minutes.',
+  'After this, Mibo writes his notes right here on this device.',
+];
 const NOTING = [
   'Mibo is reading the practice log…', 'Spotting what went well…', 'Looking for the tricky bits…',
   'Thinking about what to try next…', 'Dreaming up lesson ideas…',
@@ -57,6 +61,7 @@ export function Report() {
     }
   };
 
+  const downloading = busy === 'device' && download !== null && download < 1;
   const onDevice = device === 'available' || device === 'downloadable' || device === 'downloading';
   const tricky = sum.words.filter(w => w.notYet > 0 || w.firstTry < w.times).slice(0, 8);
 
@@ -66,8 +71,8 @@ export function Report() {
         <ZoneBar title="Mibo's notes" onBack={goHome} />
         <div className="scroll"><div className="body">
           <p className="center soft" style={{ fontSize: 15, lineHeight: '21px' }}>
-            How practice is going and what to focus on next. These are practice notes, not an assessment, and everything on
-            this page is stored on this device only.
+            How practice is going and what to focus on next. These are practice notes, not an assessment, and they are
+            kept on this device.
           </p>
 
           {sum.total === 0 ? (
@@ -115,7 +120,7 @@ export function Report() {
                 {notes && !busy && (
                   <>
                     <span className={`tag ${notes.where}`}>
-                      {notes.where === 'device' ? '🔒 Written on this device. Nothing left it.' : '☁️ Written in the cloud from words and counts only'}
+                      {notes.where === 'device' ? '🔒 Written on this device' : '☁️ Written in the cloud'}
                     </span>
                     <p className="headline">{notes.headline}</p>
                     {notes.goingWell.length > 0 && <><h3>Going well</h3><ul>{notes.goingWell.map(x => <li key={x}>{x}</li>)}</ul></>}
@@ -130,8 +135,8 @@ export function Report() {
                         </div>
                         <p className="note">
                           {bringBack.length
-                            ? `An idea opens the lesson maker with that topic and the words that took more goes (${bringBack.join(', ')}). You choose what is sent to the cloud planner; the notes and the log are not.`
-                            : 'An idea opens the lesson maker with that topic. Only what you confirm there is sent to the cloud planner; the notes and the log are not.'}
+                            ? `Tap an idea to open the lesson maker with that topic and the words that took more goes (${bringBack.join(', ')}). You can change either before Mibo plans the lesson.`
+                            : 'Tap an idea to open the lesson maker with that topic. You can change it before Mibo plans the lesson.'}
                         </p>
                       </>
                     )}
@@ -139,11 +144,10 @@ export function Report() {
                   </>
                 )}
                 {busy && (
-                  <Working title={busy === 'device' ? 'Reading the practice log on this device' : 'Writing the notes in the cloud'}
-                    messages={busy === 'device' && download !== null && download < 1
-                      ? [`Fetching the on-device model… ${Math.round(download * 100)}%`, 'This is a big one-time download.', 'Nothing about your child is being sent.']
-                      : NOTING}
-                    progress={busy === 'device' && download !== null && download < 1 ? download * 0.8 : undefined} estimate={busy === 'device' ? 25 : 15} />
+                  <Working title={busy === 'cloud' ? 'Writing the notes in the cloud' : downloading ? 'Getting ready to write the notes' : 'Reading the practice log on this device'}
+                    messages={downloading ? DOWNLOADING : NOTING}
+                    progress={downloading ? download! : undefined} detail={downloading ? `${Math.round(download! * 100)}%` : undefined}
+                    estimate={busy === 'device' ? 25 : 15} />
                 )}
                 {!!error && <p className="err">{error}</p>}
                 {!busy && !firebaseReady && <p className="err">This build has no Firebase setup yet, so Mibo cannot write notes (see the README).</p>}
@@ -154,7 +158,7 @@ export function Report() {
                         onPress={() => void write('device')} />
                     </div>
                     <p className="note">
-                      {`🔒 ${DEVICE_LABEL[device]}. The practice log is read by the AI model built into this browser and is not sent anywhere.`}
+                      {`🔒 ${DEVICE_LABEL[device]}. The notes are written by the AI built into this browser, so the practice log stays on this device.`}
                       {device !== 'available' && ' The model is a large one-time download.'}
                     </p>
                   </>
@@ -182,8 +186,8 @@ export function Report() {
             <div className="big">☁️</div>
             <h2>Send the practice counts to the cloud?</h2>
             <p>
-              To write the notes, Gemini (through Firebase) would be sent the counts on this page: the lesson names, the
-              words practised, how many goes each took, and what Mibo's listening heard. No audio and no name.
+              To write the notes, Gemini (through Firebase) would receive the counts on this page: the lesson names, the
+              words practised, how many goes each took, and what Mibo's listening heard. That is all it receives.
             </p>
             <div className="row"><Bubble label="Yes, write the notes" bg={C.sky} deep="#2f7fb8" onPress={() => void write('cloud')} /></div>
             <div className="row"><Bubble small label="No, keep it on this device" bg={C.mint} deep={C.mintDeep} onPress={() => setAskCloud(false)} /></div>

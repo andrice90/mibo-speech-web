@@ -10,7 +10,7 @@ import { C } from './theme';
 const POINTS: [string, string, string][] = [
   ['👀', C.sky, 'Mibo is for a grown-up and child together. Stay alongside; the ◀ ▶ arrows redo or skip any step.'],
   ['🌱', C.mint, 'Mibo is a practice buddy, not a speech therapist. He does not diagnose anything.'],
-  ['🔒', C.lavender, "Your child's lessons use no AI, and their voice is never kept or sent anywhere."],
+  ['🔒', C.lavender, "Your child's lessons use no AI, and Mibo's listening happens right here on this device."],
   ['✨', C.butter, 'AI is only used in the grown-up zone, behind your PIN, to write notes for you and to make new lessons.'],
 ];
 

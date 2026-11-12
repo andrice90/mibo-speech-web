@@ -40,10 +40,10 @@ export function MicSwitch({ on, onChange }: { on: boolean; onChange: (on: boolea
             : <><b>This browser cannot share the microphone with this page.</b> Mibo will rely on your ◀ ▶ arrows.</>}
         </p>
       )}
-      {state === 'idle' && on && <p className="mic-help ok">Microphone allowed ✓ Mibo listens during a try and nothing is kept.</p>}
+      {state === 'idle' && on && <p className="mic-help ok">Microphone allowed ✓ Mibo listens only while your child has a go.</p>}
       {state === 'idle' && !on && (
         <p className="mic-help">
-          Optional. Mibo checks each try on this device; voices are never kept or sent. Your browser will ask for permission when you switch this on.
+          Optional. Mibo checks each try right here on this device. Your browser will ask for permission when you switch this on.
           Without it, you tell Mibo how each try went with the ◀ ▶ arrows.
         </p>
       )}
