@@ -18,7 +18,7 @@ export const C = {
   tealDeep: '#1f8a86',
   /** Red is kept for destructive actions (delete, clear, reset). */
   rose: '#ffc7d6',
-  roseDeep: '#c94f7c',
+  roseDeep: '#b23362',
   white: '#ffffff',
 };
 

@@ -61,7 +61,7 @@ export function Working({ messages, progress, estimate = 20, title, detail }: {
       </div>
       {/* keyed by the line, so the fade plays when the line changes and never when a number ticks */}
       <p key={line} className="working-line">{line}</p>
-      {t > 45 && <p className="note">This is taking longer than usual. You can keep waiting; Mibo is still working.</p>}
+      {t > 45 && <p className="note">This is taking a little longer than usual. Mibo is still working on it.</p>}
     </div>
   );
 }

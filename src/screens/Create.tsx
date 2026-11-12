@@ -101,8 +101,7 @@ export function Create({ params }: { params: Record<string, string> }) {
         <ZoneBar title="Make a new lesson" onBack={() => go('parent', {}, { replace: true })} />
         <div className="scroll"><div className="body">
           <p className="center soft" style={{ fontSize: 15, lineHeight: '21px' }}>
-            Tell Mibo what words to work on. Gemini writes a plan in the cloud, and you check it before Mibo records
-            his voice for it.
+            Tell Mibo which words to practise. He'll write a plan with Gemini for you to look over before he records it.
           </p>
 
           {stage === 'planning' && (
@@ -138,7 +137,7 @@ export function Create({ params }: { params: Record<string, string> }) {
                 <Bubble label="Make my lesson plan" bg={C.mint} deep={C.mintDeep}
                   disabled={!validTopic(topic) || !firebaseReady} onPress={() => void makePlan(topic)} />
               </div>
-              <p className="note">Mibo is a practice buddy, not a speech therapist. Made lessons are AI-written: please check the words before playing.</p>
+              <p className="note">Lessons are written by AI, so have a quick look at the words before you play.</p>
             </Card>
           )}
 

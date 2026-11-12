@@ -1,7 +1,7 @@
 :root {
   --paper: #fff8ee; --card: #fffdf8; --ink: #3b3355; --soft: #7a7194;
   --mint: #9ff0cf; --mint-deep: #2fa57a; --lavender: #e4dbff; --lavender-deep: #7b61d1;
-  --peach: #ffd2bd; --peach-deep: #ec7d55; --butter: #ffe999; --sky: #d4efff; --rose: #ffc7d6; --rose-deep: #c94f7c;
+  --peach: #ffd2bd; --peach-deep: #ec7d55; --butter: #ffe999; --sky: #d4efff; --rose: #ffc7d6; --rose-deep: #b23362;
   --shadow: 0 6px 16px rgba(107, 90, 142, 0.14);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -21,7 +21,9 @@ h2 { font-weight: 700; font-size: 20px; }
   height: 100dvh; display: flex; flex-direction: column;
   padding: max(8px, env(safe-area-inset-top)) max(0px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left));
 }
-.column { flex: 1; min-height: 0; width: 100%; margin: 0 auto; display: flex; flex-direction: column; position: relative; }
+.column { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; position: relative; }
+.column > :not(.scroll):not(.scrim) { width: 100%; max-width: var(--max, 640px); margin-left: auto; margin-right: auto; }
+.scroll > * { max-width: var(--max, 640px); margin-left: auto; margin-right: auto; }
 .scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .scroll::-webkit-scrollbar { display: none; }
 .row { display: flex; gap: 12px; align-self: stretch; }
@@ -34,7 +36,7 @@ h2 { font-weight: 700; font-size: 20px; }
 .bubble { flex: 1; display: block; border-radius: 22px; background: var(--edge); padding-top: 5px; }
 .bubble > span {
   display: flex; align-items: center; justify-content: center; border-radius: 22px; padding: 17px 12px;
-  background: var(--face); color: var(--edge); font-weight: 700; font-size: 20px; transform: translateY(-5px); transition: transform 60ms;
+  background: var(--face); color: color-mix(in srgb, var(--edge) 68%, #1c1530); font-weight: 700; font-size: 20px; transform: translateY(-5px); transition: transform 60ms;
 }
 .bubble.small > span { padding: 11px 12px; font-size: 16px; }
 .bubble:active:not(:disabled) > span { transform: translateY(0); }

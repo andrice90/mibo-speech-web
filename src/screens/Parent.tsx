@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { DEVICE_LABEL, deviceAiStatus, type DeviceAi } from '../ai/device';
+import { deviceAiStatus, type DeviceAi } from '../ai/device';
 import { firebaseReady } from '../ai/firebase';
 import { loadConsent, saveConsent } from '../lesson/consent';
 import { deleteCustomLesson, listCustomLessons, type CustomLesson } from '../lesson/custom';
@@ -64,14 +64,14 @@ export function Parent() {
               {notes && pending === 0 && <span className="badge-ok">Up to date</span>}
             </div>
             {sum.total === 0 ? (
-              <p className="soft">Nothing practised yet. After a lesson, Mibo can write up how it went and what to focus on next.</p>
+              <p className="soft">No practice yet. Play a lesson and Mibo will have something to write about.</p>
             ) : notes ? (
               <>
                 <p className="dash-quote">{notes.headline}</p>
                 <p className="note">{`Written ${ago(notes.at)}, ${notes.where === 'device' ? 'on this device' : 'in the cloud'}.`}</p>
               </>
             ) : (
-              <p className="soft">Mibo has not written any notes yet. He reads the practice log and tells you what went well, where it was tricky, and what to focus on next.</p>
+              <p className="soft">Mibo hasn't written any notes yet. He'll look at how practice went and suggest what to try next.</p>
             )}
             {sum.total > 0 && (
               <div className="row">
@@ -87,7 +87,7 @@ export function Parent() {
               <>
                 <p className="soft">From his notes, Mibo suggests:</p>
                 <p className="dash-quote">{idea}</p>
-                {bringBack.length > 0 && <p className="note">{`Bringing back the words that took more goes: ${bringBack.join(', ')}.`}</p>}
+                {bringBack.length > 0 && <p className="note">{`With another go at ${bringBack.join(', ')}.`}</p>}
                 <div className="row"><Bubble small label="Make this lesson" bg={C.mint} deep={C.mintDeep} onPress={() => plan(idea)} /></div>
                 {notes!.lessonIdeas.length > 1 && (
                   <div className="chips">
@@ -99,7 +99,7 @@ export function Parent() {
             ) : (
               <>
                 <p className="soft">
-                  {sum.total > 0 ? "Once Mibo has written his notes, he will suggest a lesson that fits. Or choose the words yourself." : 'Choose the words; Mibo plans the lesson and gives it his voice.'}
+                  {sum.total > 0 ? "Mibo will suggest a lesson once he's written his notes. You can also pick the words yourself." : 'Pick some words and Mibo will turn them into a lesson.'}
                 </p>
                 <div className="row"><Bubble small label="Make a new lesson" bg={C.mint} deep={C.mintDeep} onPress={() => plan()} /></div>
               </>
@@ -131,12 +131,12 @@ export function Parent() {
             </div>
             <p className="note" style={{ textAlign: 'left', marginBottom: 0 }}>
               {!firebaseReady
-                ? 'Firebase is not set up in this build. Lessons still play; notes and new lessons need it.'
+                ? 'Firebase is not set up in this build, so notes and new lessons are switched off.'
                 : device === null ? ''
                 : device === 'unavailable'
-                  ? `☁️ ${DEVICE_LABEL[device]}. The practice log stays on this device unless you choose, each time, to let the cloud write the notes.`
-                  : `🔒 ${DEVICE_LABEL[device]}. Mibo reads the practice log and writes his notes on this device.`}
-              {' '}New lessons are planned and voiced in the cloud. Lessons themselves use no AI.
+                  ? '☁️ This browser has no built-in AI, so Mibo will ask before writing his notes in the cloud.'
+                  : '🔒 Mibo writes his notes on this device.'}
+              {' '}New lessons are made in the cloud.
             </p>
             <div className="row"><Bubble small label="Done" bg={C.mint} deep={C.mintDeep} onPress={() => setSettings(false)} /></div>
           </Dialog>

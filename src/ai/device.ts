@@ -25,10 +25,3 @@ export async function deviceAiStatus(): Promise<DeviceAi> {
     return 'unavailable';
   }
 }
-
-export const DEVICE_LABEL: Record<DeviceAi, string> = {
-  available: 'On-device AI is ready',
-  downloadable: 'On-device AI can be downloaded',
-  downloading: 'On-device AI is downloading…',
-  unavailable: 'No on-device AI in this browser',
-};

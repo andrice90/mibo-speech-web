@@ -36,15 +36,15 @@ export function MicSwitch({ on, onChange }: { on: boolean; onChange: (on: boolea
       {state === 'blocked' && (
         <p className="mic-help blocked">
           {canListen()
-            ? <><b>The browser did not allow the microphone.</b> Click the icon at the left end of the address bar, set Microphone to Allow, then switch this on again.</>
-            : <><b>This browser cannot share the microphone with this page.</b> Mibo will rely on your ◀ ▶ arrows.</>}
+            ? <><b>The microphone is blocked.</b> Click the icon at the left end of the address bar, set Microphone to Allow, then switch this on again.</>
+            : <><b>This browser can't use the microphone here.</b> Use the ◀ ▶ arrows to tell Mibo how each try went.</>}
         </p>
       )}
-      {state === 'idle' && on && <p className="mic-help ok">Microphone allowed ✓ Mibo listens only while your child has a go.</p>}
+      {state === 'idle' && on && <p className="mic-help ok">Microphone is on ✓</p>}
       {state === 'idle' && !on && (
         <p className="mic-help">
-          Optional. Mibo checks each try right here on this device. Your browser will ask for permission when you switch this on.
-          Without it, you tell Mibo how each try went with the ◀ ▶ arrows.
+          Up to you. Switch this on and your browser will ask for the microphone. Leave it off and you can tell Mibo how each
+          try went with the ◀ ▶ arrows.
         </p>
       )}
     </div>

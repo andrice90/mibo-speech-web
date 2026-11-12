@@ -36,7 +36,7 @@ export function ParentGate({ children }: { children: ReactNode }) {
           <Dialog onClose={() => setAskReset(false)}>
             <div className="big">🧹</div>
             <h2>Start again from scratch?</h2>
-            <p>The PIN cannot be recovered. Starting again removes everything Mibo keeps on this device: the PIN, made lessons, the practice log and notes.</p>
+            <p>There's no way to look up a forgotten PIN. Starting again clears the PIN, your lessons and Mibo's notes from this device.</p>
             <div className="row"><Bubble label="Remove everything" bg={C.rose} deep={C.roseDeep} onPress={() => void resetEverything().then(goHome)} /></div>
             <div className="row"><Bubble small label="Keep it" bg={C.mint} deep={C.mintDeep} onPress={() => setAskReset(false)} /></div>
           </Dialog>

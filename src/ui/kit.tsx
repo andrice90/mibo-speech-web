@@ -4,9 +4,14 @@ import { goHome } from '../lib/router';
 import { lock } from '../lib/zone';
 import { C } from './theme';
 
-/** Keeps a screen to a readable, thumb-friendly width on tablets and desktops: centred, full width on phones. */
+/**
+ * Keeps a screen's content to a readable, thumb-friendly width on tablets and
+ * desktops: centred, full width on phones. The column itself spans the whole
+ * window and its parts are what get the width, so a scrolling area scrolls
+ * from anywhere on the page, not only when the pointer is over the content.
+ */
 export function Column({ children, max = 640 }: { children: ReactNode; max?: number }) {
-  return <div className="column" style={{ maxWidth: max }}>{children}</div>;
+  return <div className="column" style={{ '--max': `${max}px` } as CSSProperties}>{children}</div>;
 }
 
 export function Card({ children, className = '', tint = C.card, style }: { children: ReactNode; className?: string; tint?: string; style?: CSSProperties }) {

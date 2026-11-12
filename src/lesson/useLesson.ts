@@ -31,7 +31,7 @@ const SOUND_SAID: Record<string, string> = { s: 'an “s” sound', th: 'a “th
 function describe(v: (TryVerdict & { word?: string }) | undefined, ex: Exercise): string {
   if (!v) return '';
   if (v.match === true) return v.heard !== 'none' ? `Mibo heard ${SOUND_SAID[v.heard] ?? v.heard} ✓` : 'Mibo heard it ✓';
-  if (v.match === null) return 'Mibo was not sure, so it counts';
+  if (v.match === null) return "Mibo wasn't sure, so that counts";
   if (v.word && v.word !== ex.target) return `Mibo thought it sounded more like “${v.word}”. Tap ▶ if it was right.`;
   if (v.heard !== 'none') return `Mibo heard ${SOUND_SAID[v.heard] ?? v.heard}. Tap ▶ if it was right.`;
   return 'Mibo could not hear the sound clearly. Tap ▶ if it was right.';

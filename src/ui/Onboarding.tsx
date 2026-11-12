@@ -8,10 +8,10 @@ import { PinPad } from './PinPad';
 import { C } from './theme';
 
 const POINTS: [string, string, string][] = [
-  ['👀', C.sky, 'Mibo is for a grown-up and child together. Stay alongside; the ◀ ▶ arrows redo or skip any step.'],
-  ['🌱', C.mint, 'Mibo is a practice buddy, not a speech therapist. He does not diagnose anything.'],
-  ['🔒', C.lavender, "Your child's lessons use no AI, and Mibo's listening happens right here on this device."],
-  ['✨', C.butter, 'AI is only used in the grown-up zone, behind your PIN, to write notes for you and to make new lessons.'],
+  ['👀', C.sky, 'Sit with your child while they play. The ◀ ▶ arrows let you repeat or skip a step.'],
+  ['🌱', C.mint, "Mibo is for practice at home. For advice about your child's speech, talk to a speech therapist."],
+  ['🔒', C.lavender, 'Mibo listens to your child on this device, and lessons run without any AI.'],
+  ['✨', C.butter, 'AI helps out in the grown-up zone, where Mibo writes notes for you and makes new lessons.'],
 ];
 
 export type Step = 'welcome' | 'consent' | 'pin';
@@ -37,7 +37,7 @@ export function Onboarding({ from, onDone }: { from: Step; onDone: () => void })
         <>
           <Card className="consent">
             <h2>Welcome to Mibo! 👋</h2>
-            <p className="soft" style={{ fontSize: 15, marginBottom: 4 }}>Short, playful speech practice with a friendly monster. A few things to know first:</p>
+            <p className="soft" style={{ fontSize: 15, marginBottom: 4 }}>Mibo is a friendly monster who helps little ones practise tricky sounds. Before you start:</p>
             {POINTS.map(([icon, bg, text]) => (
               <div key={icon} className="point">
                 <span className="point-chip" style={{ backgroundColor: bg }}>{icon}</span>
@@ -63,14 +63,14 @@ export function Onboarding({ from, onDone }: { from: Step; onDone: () => void })
           <div className="row">
             <Bubble label="Continue" bg={C.mint} deep={C.mintDeep} disabled={!grownUp} onPress={() => { saveConsent(hear); setStep('pin'); }} />
           </div>
-          <p className="note center">You can change listening later in the grown-up zone settings.</p>
+          <p className="note center">You can change this later in Settings.</p>
         </>
       )}
 
       {step === 'pin' && (
         <Card>
           <PinPad key={first ? 'again' : 'first'} title={first ? 'Confirm PIN' : 'Choose a grown-up PIN 🔒'}
-            hint={first ? 'Enter the same four digits again.' : "Four digits. It opens the grown-up zone, where lessons are made and Mibo's notes are kept."}
+            hint={first ? 'Enter the same four digits again.' : "Pick four digits. You'll use them to open the grown-up zone."}
             onEntered={async pin => {
               if (!first) { if (!validPin(pin)) return false; setFirst(pin); return true; }
               if (pin !== first) { setFirst(''); return false; }

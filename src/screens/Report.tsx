@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { DEVICE_LABEL, deviceAiStatus, type DeviceAi } from '../ai/device';
+import { deviceAiStatus, type DeviceAi } from '../ai/device';
 import { cloudError, firebaseReady } from '../ai/firebase';
 import { writeNotes, type Notes } from '../ai/report';
 import { allResults, clearResults, summarise, wordsToBringBack } from '../lesson/results';
@@ -71,15 +71,14 @@ export function Report() {
         <ZoneBar title="Mibo's notes" onBack={goHome} />
         <div className="scroll"><div className="body">
           <p className="center soft" style={{ fontSize: 15, lineHeight: '21px' }}>
-            How practice is going and what to focus on next. These are practice notes, not an assessment, and they are
-            kept on this device.
+            A look at how practice is going. Mibo's notes are a guide for you at home, and they are saved on this device.
           </p>
 
           {sum.total === 0 ? (
             <Card className="stack center">
               <div style={{ fontSize: 44 }}>🌱</div>
               <h2>Nothing to read yet</h2>
-              <p className="soft">Play a lesson with your child, then come back: Mibo keeps track of each word as you go.</p>
+              <p className="soft">Play a lesson with your child and come back. Mibo keeps track as you go.</p>
               <div className="row"><Bubble label="Back" bg={C.mint} deep={C.mintDeep} onPress={goHome} /></div>
             </Card>
           ) : (
@@ -135,12 +134,12 @@ export function Report() {
                         </div>
                         <p className="note">
                           {bringBack.length
-                            ? `Tap an idea to open the lesson maker with that topic and the words that took more goes (${bringBack.join(', ')}). You can change either before Mibo plans the lesson.`
-                            : 'Tap an idea to open the lesson maker with that topic. You can change it before Mibo plans the lesson.'}
+                            ? `Tap an idea to start a new lesson. It will include another go at ${bringBack.join(', ')}.`
+                            : 'Tap an idea to start a new lesson.'}
                         </p>
                       </>
                     )}
-                    <p className="note">{`Written ${new Date(notes.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} by AI from Mibo's practice log. It can be wrong: you know your child best.`}</p>
+                    <p className="note">{`Written ${new Date(notes.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} by AI. You know your child best, so take it as a starting point.`}</p>
                   </>
                 )}
                 {busy && (
@@ -158,15 +157,14 @@ export function Report() {
                         onPress={() => void write('device')} />
                     </div>
                     <p className="note">
-                      {`🔒 ${DEVICE_LABEL[device]}. The notes are written by the AI built into this browser, so the practice log stays on this device.`}
-                      {device !== 'available' && ' The model is a large one-time download.'}
+                      🔒 Mibo writes these notes with the AI built into your browser, so they stay on this device.
+                      {device !== 'available' && ' The first time takes a while because the AI has to download.'}
                     </p>
                   </>
                 ) : (
                   <>
                     <p className="note">
-                      This device has no built-in AI model, so the notes cannot be written on it. The counts above are still
-                      worked out here.
+                      This browser has no built-in AI, so Mibo can write the notes in the cloud if you'd like.
                     </p>
                     <div className="row">
                       <Bubble small label={notes ? 'Write fresh notes in the cloud…' : 'Write the notes in the cloud…'} bg={C.sky} deep="#2f7fb8"
@@ -184,20 +182,20 @@ export function Report() {
         {askCloud && (
           <Dialog onClose={() => setAskCloud(false)}>
             <div className="big">☁️</div>
-            <h2>Send the practice counts to the cloud?</h2>
+            <h2>Write the notes in the cloud?</h2>
             <p>
-              To write the notes, Gemini (through Firebase) would receive the counts on this page: the lesson names, the
-              words practised, how many goes each took, and what Mibo's listening heard. That is all it receives.
+              Mibo will send the numbers on this page to Gemini to write the notes. That includes the lesson names, the
+              words practised and how many goes each one took.
             </p>
             <div className="row"><Bubble label="Yes, write the notes" bg={C.sky} deep="#2f7fb8" onPress={() => void write('cloud')} /></div>
-            <div className="row"><Bubble small label="No, keep it on this device" bg={C.mint} deep={C.mintDeep} onPress={() => setAskCloud(false)} /></div>
+            <div className="row"><Bubble small label="No thanks" bg={C.mint} deep={C.mintDeep} onPress={() => setAskCloud(false)} /></div>
           </Dialog>
         )}
         {askClear && (
           <Dialog onClose={() => setAskClear(false)}>
             <div className="big">🧹</div>
             <h2>Clear the practice log?</h2>
-            <p>{"The record of words practised and Mibo's notes will be removed from this device. Lessons and names stay."}</p>
+            <p>{"This removes the practice history and Mibo's notes from this device. Your lessons stay."}</p>
             <div className="row">
               <Bubble label="Clear it" bg={C.rose} deep={C.roseDeep}
                 onPress={() => { clearResults(); saveNotes(null); setNotes(null); setResults([]); setAskClear(false); }} />
