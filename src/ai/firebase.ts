@@ -4,12 +4,18 @@
  * the browser has it, Gemini in the cloud otherwise. There is no other model
  * API and no server of our own.
  *
+ * Models are only ever used from the grown-up zone (src/lib/zone.ts). The kid
+ * zone plays lessons with no AI calls at all, and `miboAI()` refuses to hand
+ * out a model while the app is in it.
+ *
  * App Check is required by AI Logic. The hosted app uses reCAPTCHA
  * Enterprise; on localhost or a test device, a debug token stands in.
  */
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { CustomProvider, initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { getAI, GoogleAIBackend, type AI } from 'firebase/ai';
+
+import { inParentZone } from '../lib/zone';
 
 const env = import.meta.env;
 const config = {
@@ -28,6 +34,7 @@ let app: FirebaseApp | null = null;
 let ai: AI | null = null;
 
 export function miboAI(): AI {
+  if (!inParentZone()) throw new Error('AI is only used in the grown-up zone');
   if (ai) return ai;
   if (!firebaseReady) throw new Error('Firebase is not configured');
   app = initializeApp(config);
@@ -54,7 +61,7 @@ export function miboAI(): AI {
 
 /** Cloud models, all on the Gemini Developer API's no-cost tier. */
 export const MODELS = {
-  /** Fallback for Mibo's short reply and the parent notes when the device has no built-in model. */
+  /** Writes the parent notes when the device has no built-in model and the grown-up agrees. */
   small: 'gemini-3.5-flash-lite',
   /** Writes new lesson plans. */
   plan: 'gemini-3.8-flash',

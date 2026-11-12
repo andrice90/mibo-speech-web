@@ -11,7 +11,11 @@ export const bundled = (id: string): Clip => {
   return { source: url(id), text: c?.text ?? '', visemes: c?.visemes ?? [], seconds: c?.seconds ?? 0 };
 };
 
-/** Fetch and decode some bundled clips before the lesson, so no line waits on the network. `dyn_*` ids are skipped. */
-export async function preloadClips(ids: string[]): Promise<void> {
-  await preload(ids.filter(id => CLIPS[id]).map(url));
+/**
+ * Fetch and decode a lesson's clips before it starts, so no line waits on the
+ * network: bundled ids, plus `extra` sources (a made lesson's saved voice).
+ * Resolves false if any clip could not be loaded.
+ */
+export function preloadClips(ids: string[], extra: string[] = []): Promise<boolean> {
+  return preload([...ids.filter(id => CLIPS[id]).map(url), ...extra]);
 }

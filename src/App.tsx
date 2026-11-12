@@ -2,17 +2,22 @@ import { useRoute } from './lib/router';
 import { Create } from './screens/Create';
 import { Home } from './screens/Home';
 import { Lesson } from './screens/Lesson';
+import { Parent } from './screens/Parent';
+import { ParentGate } from './screens/ParentGate';
 import { Report } from './screens/Report';
-import { Welcome } from './screens/Welcome';
 
+/**
+ * Two zones. Home and Lesson are the kid zone: no AI calls. Parent, Report
+ * and Create are the grown-up zone, behind the PIN (ParentGate).
+ */
 export function App() {
   const { path, params } = useRoute();
-  // the key remounts a screen when its lesson changes, so nothing carries over between lessons
   switch (path) {
-    case 'welcome': return <Welcome key={`${params.lesson}-${params.resume}`} params={params} />;
+    // the key remounts the lesson when it changes, so nothing carries over between lessons
     case 'lesson': return <Lesson key={`${params.lesson}-${params.custom}`} params={params} />;
-    case 'create': return <Create params={params} />;
-    case 'report': return <Report />;
+    case 'parent': return <ParentGate><Parent /></ParentGate>;
+    case 'create': return <ParentGate><Create params={params} /></ParentGate>;
+    case 'report': return <ParentGate><Report /></ParentGate>;
     default: return <Home />;
   }
 }

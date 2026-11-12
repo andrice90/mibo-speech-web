@@ -6,12 +6,15 @@
 import { deleteAudio, readJson, writeJson } from '../lib/store';
 import type { Clip } from '../voice/player';
 import type { Step } from './content';
+import type { Templates } from '../voice/wordcheck';
 import { soundForWord, type LessonPlan } from './plan';
 import type { SavedClip } from './progress';
 
 export type CustomLesson = {
   id: string; createdAt: number; plan: LessonPlan;
   clips: Record<string, SavedClip>;
+  /** Word templates made from Mibo's model clips, for the on-device word check. */
+  templates?: Templates;
 };
 
 const KEY = 'mibo-custom-lessons-v1';
@@ -35,7 +38,7 @@ export function deleteCustomLesson(id: string) {
 export const newLessonId = () => `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
 
 /** The steps the lesson player runs for a made lesson. */
-export function buildSteps(plan: LessonPlan): Step[] {
+export function buildSteps({ plan, templates = {} }: CustomLesson): Step[] {
   const steps: Step[] = [
     { kind: 'line', clip: 'dyn_intro', mood: 'happy', act: 'wave' },
     { kind: 'line', clip: 'dyn_warmup', mood: 'silly' },
@@ -43,7 +46,10 @@ export function buildSteps(plan: LessonPlan): Step[] {
   for (const w of plan.words) {
     steps.push({
       kind: 'try',
-      ex: { sound: soundForWord(w.word), target: w.word, model: `dyn_word_${w.word}`, prompt: 'sayIt', emoji: w.emoji, kind: 'word', check: 'stt' },
+      ex: {
+        sound: soundForWord(w.word), target: w.word, model: `dyn_word_${w.word}`, prompt: 'sayIt', emoji: w.emoji, kind: 'word',
+        ...(soundForWord(w.word) === 'custom' && templates[w.word] ? { check: 'template' as const } : {}),
+      },
     });
   }
   steps.push({

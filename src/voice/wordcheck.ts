@@ -28,7 +28,8 @@ export type WordVerdict = {
   dists?: Record<string, number>;
 };
 
-const TEMPLATES = templatesJson as Record<string, number[][]>;
+export type Templates = Record<string, number[][]>;
+const TEMPLATES = templatesJson as Templates;
 export const TWISTY_WORDS = Object.keys(TEMPLATES);
 
 /**
@@ -103,14 +104,16 @@ function dtw(a: Float64Array[], b: number[][]): number {
 }
 
 /**
- * Judge one listening window against `target` (one of TWISTY_WORDS).
+ * Judge one listening window against `target` (a built-in twisty word, or a word in `extra`).
  * Every speech run is tried, plus all runs spliced together, so both a
  * whole-word try and a chunk-by-chunk try get their chance; the attempt
  * closest to the target decides.
  */
-export function judgeWord(x: Float32Array, sr: number, target: string): WordVerdict {
+export function judgeWord(x: Float32Array, sr: number, target: string, extra: Templates = {}): WordVerdict {
+  // a made lesson brings its own words; the built-in ones stay in as words it must not be confused with
+  const all: Templates = { ...TEMPLATES, ...extra }, words = Object.keys(all);
   const runs = speechRuns(x, sr);
-  if (!runs.length || !TEMPLATES[target]) return { speech: false, match: null };
+  if (!runs.length || !all[target]) return { speech: false, match: null };
   const pad = Math.round(0.05 * sr);
   const candidates = runs.map(([a, b]) => x.subarray(Math.max(0, a - pad), Math.min(x.length, b + pad)));
   if (runs.length > 1) {
@@ -123,7 +126,7 @@ export function judgeWord(x: Float32Array, sr: number, target: string): WordVerd
   for (const c of candidates) {
     const feats = framesOf(c, sr);
     if (feats.length < 15) continue;
-    const dists = Object.fromEntries(TWISTY_WORDS.map(w => [w, +dtw(feats, TEMPLATES[w]).toFixed(2)]));
+    const dists = Object.fromEntries(words.map(w => [w, +dtw(feats, all[w]).toFixed(2)]));
     const ranked = Object.entries(dists).sort((p, q) => p[1] - q[1]);
     const [word, d] = ranked[0], second = ranked[1]?.[1] ?? Infinity;
     const v: WordVerdict = {
@@ -133,4 +136,19 @@ export function judgeWord(x: Float32Array, sr: number, target: string): WordVerd
     if (!best || (dists[target] ?? Infinity) < (best.dists?.[target] ?? Infinity)) best = v;
   }
   return best ?? { speech: true, match: null };
+}
+
+/**
+ * A template for a new word, from Mibo's own model clip for it: the whole
+ * word comes last in every model line ("Buh... ball! Ball!"), so the last
+ * run of speech is the word. Made when a grown-up's lesson is voiced, so a
+ * made lesson's words can be checked on the device like the built-in ones.
+ * Returns null when the clip has no clear last word.
+ */
+export function makeTemplate(x: Float32Array, sr: number): number[][] | null {
+  const runs = speechRuns(x, sr);
+  if (!runs.length) return null;
+  const [a, b] = runs[runs.length - 1];
+  const frames = mfcc(x.subarray(a, b), sr).map(f => [...f.slice(0, 12)].map(v => +v.toFixed(2)));
+  return frames.length >= 15 ? frames : null;
 }

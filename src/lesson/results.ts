@@ -2,8 +2,9 @@
  * The practice log: one line per word or picture game the child finished.
  * It holds lesson facts only (the word, how many goes it took, what Mibo's
  * on-device listening heard) — never audio, never the child's name — and it
- * stays in this browser. The parent notes (src/ai/report.ts) are written
- * from it by the on-device model.
+ * stays in this browser. It is written in the kid zone by plain code (no
+ * model) and read in the grown-up zone, where the on-device model turns it
+ * into Mibo's notes (src/ai/report.ts).
  */
 import { readJson, writeJson } from '../lib/store';
 import type { Sound } from './content';
@@ -59,4 +60,16 @@ export function summarise(rs: TryResult[] = allResults()): Summary {
     words: [...words.values()],
     games: { played: picks.length, firstTry: picks.filter(p => p.ok && p.attempts === 1).length },
   };
+}
+
+/**
+ * Single words that took more than one go or were not got yet, most
+ * troublesome first: candidates to bring back in the next lesson. Plain
+ * counting, no model.
+ */
+export function wordsToBringBack(s: Summary, max = 3): string[] {
+  return s.words
+    .filter(w => /^[a-z][a-z'-]*$/.test(w.target) && (w.notYet > 0 || w.firstTry < w.times))
+    .sort((a, b) => (b.notYet * 2 + (b.times - b.firstTry)) - (a.notYet * 2 + (a.times - a.firstTry)))
+    .slice(0, max).map(w => w.target);
 }

@@ -8,7 +8,7 @@
  */
 import type { Sound } from './content';
 
-export type PlanWord = { word: string; emoji: string; sound: Sound; modelText: string };
+export type PlanWord = { word: string; emoji: string; sound: Sound; modelText: string; praiseLine: string };
 export type PlanPick = {
   askLine: string; answerLine: string;
   choices: [{ word: string; emoji: string }, { word: string; emoji: string }]; right: 0 | 1;
@@ -20,9 +20,9 @@ export type LessonPlan = {
 };
 
 /**
- * The word's opening sound, for reply tips and colouring only. Made lessons
- * are judged by speech-to-text (voice/stt.ts), which checks any word —
- * short, clustered or multi-syllable — so no word is gated out here.
+ * The word's opening sound. Words that start with s, th, sh or z get the
+ * acoustic sound check (voice/judge.ts); every other word is matched as a
+ * whole word against a template made from Mibo's clip (voice/wordcheck.ts).
  */
 export function soundForWord(word: string): Sound {
   const w = word.toLowerCase();
@@ -34,6 +34,7 @@ export function soundForWord(word: string): Sound {
 }
 
 const BLOCK = /\b(diagnos\w*|therap\w*|disorder|lisp|treatment|cure|wrong|stupid|dumb)\b/i;
+const PRAISE_BLOCK = /\b(no|bad|fail\w*|incorrect|doctor)\b|(s{3,}|h{3,}|z{3,})/i;
 const WORD_RE = /^[a-z][a-z'-]{0,23}$/;
 const clean = (v: unknown, max: number) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -44,7 +45,10 @@ export function clipTexts(plan: LessonPlan): Record<string, string> {
     dyn_intro: plan.introLine, dyn_warmup: plan.warmupLine, dyn_bye: plan.byeLine,
     dyn_pick_ask: plan.pick.askLine, dyn_pick_answer: plan.pick.answerLine,
   };
-  for (const w of plan.words) out[`dyn_word_${w.word}`] = w.modelText;
+  for (const w of plan.words) {
+    out[`dyn_word_${w.word}`] = w.modelText;
+    out[`dyn_praise_${w.word}`] = w.praiseLine;   // made ahead, so the kid zone never needs a model
+  }
   return out;
 }
 
@@ -72,7 +76,10 @@ export function validatePlan(raw: unknown, topic: string): LessonPlan | null {
     const modelText = clean(w.modelText, 120);
     if (!modelText || !modelText.toLowerCase().includes(word) || BLOCK.test(modelText)) continue;
     seen.add(word);
-    words.push({ word, emoji: clean(w.emoji, 8) || '⭐', sound: soundForWord(word), modelText });
+    // Mibo's cheer for this word; anything missing, too long or off-limits is replaced with a plain one
+    let praiseLine = clean(w.praiseLine, 90);
+    if (!praiseLine || praiseLine.split(' ').length > 14 || BLOCK.test(praiseLine) || PRAISE_BLOCK.test(praiseLine)) praiseLine = `${cap(word)}! You said it!`;
+    words.push({ word, emoji: clean(w.emoji, 8) || '⭐', sound: soundForWord(word), modelText, praiseLine });
     if (words.length === 6) break;
   }
   if (words.length < 4) return null;

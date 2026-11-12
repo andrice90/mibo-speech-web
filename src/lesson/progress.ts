@@ -1,17 +1,10 @@
-/**
- * Where each lesson was left off, kept on this device only: the step, the
- * stars, and the optional first name with Mibo's name clips (saved audio,
- * so resuming never sends the name anywhere again).
- */
+/** Where each lesson was left off (the step and the stars), kept on this device only. */
 import { readJson, writeJson } from '../lib/store';
 import type { Viseme } from '../voice/analyze';
 
 /** `uri` is `idb:<key>`: the WAV sits in this browser's IndexedDB. */
 export type SavedClip = { uri: string; text: string; visemes: Viseme[]; seconds: number };
-export type Progress = {
-  step: number; stars: number; at: number;
-  name?: string; nameLines?: Record<'hi' | 'got' | 'tricky' | 'bye', SavedClip>;
-};
+export type Progress = { step: number; stars: number; at: number };
 type Store = Record<string, Progress>;
 
 const KEY = 'mibo-progress-v1';

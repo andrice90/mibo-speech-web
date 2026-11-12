@@ -208,3 +208,30 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 .progress { height: 10px; border-radius: 5px; background: var(--lavender); overflow: hidden; }
 .progress i { display: block; height: 100%; background: var(--lavender-deep); transition: width 200ms; }
 .idea { background: var(--rose); border-radius: 999px; padding: 9px 14px; font-weight: 600; font-size: 14px; color: var(--rose-deep); }
+
+/* ---- PIN and the grown-up zone */
+.pinpad { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.pin-dots { display: flex; gap: 14px; margin: 6px 0; }
+.pin-dots i { width: 18px; height: 18px; border-radius: 9px; border: 2.5px solid var(--lavender-deep); background: #fff; }
+.pin-dots i.on { background: var(--lavender-deep); }
+.pin-dots.bad { animation: shake 0.4s; }
+.pin-dots.bad i { border-color: var(--peach-deep); }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.pin-keys { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+.pin-keys button {
+  height: 64px; border-radius: 22px; background: var(--lavender); color: var(--lavender-deep); font-weight: 700; font-size: 26px;
+  box-shadow: 0 4px 0 #c9bdf5; transition: transform 60ms;
+}
+.pin-keys button:active { transform: translateY(3px); box-shadow: 0 1px 0 #c9bdf5; }
+.pin-keys button.back { background: var(--peach); color: var(--peach-deep); box-shadow: 0 4px 0 #f3b89e; }
+.grownups { align-self: center; font-weight: 600; font-size: 14px; color: var(--soft); background: #fff; border-radius: 999px; padding: 8px 16px; box-shadow: 0 3px 8px rgba(107, 90, 142, 0.1); }
+.zone-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 16px 0; }
+.zone-bar h1 { font-weight: 700; font-size: 26px; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; }
+.setting button.link { color: var(--lavender-deep); font-weight: 600; text-decoration: underline; flex: none; }
+.made-row { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.made-row .t { flex: 1; min-width: 0; }
+.made-row .t b { font-weight: 700; display: block; }
+.made-row .t span { color: var(--soft); font-size: 13px; }
+.tap-start { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; background: rgba(255, 248, 238, 0.7); border-radius: 32px; }
+.tap-start button { background: var(--mint); color: #1f6f52; font-weight: 700; font-size: 26px; border-radius: 999px; padding: 18px 34px; box-shadow: 0 6px 0 var(--mint-deep); }

@@ -20,7 +20,7 @@
  * the said word is matched against the target word's template, so a
  * different word does not pass; a muddled try at the right word does.
  */
-/** `custom`: a word from a grown-up-made lesson whose first sound the check cannot hear yet; any clear try passes and the grown-up's arrows override. */
+/** `custom`: a word from a grown-up-made lesson that does not start with one of the four checked sounds; it is matched as a whole word instead. */
 export type Sound = 's' | 'th' | 'sh' | 'z' | 'rhyme' | 'twisty' | 'custom';
 
 /** Talk lines. Keys are clip ids. */
@@ -217,8 +217,8 @@ export type ClipId = LineId | ModelId;
 export type Exercise = {
   sound: Sound; target: string; model: string; prompt: string; emoji: string;
   kind: 'hold' | 'word' | 'end'; cue?: string;
-  /** `stt`: judge by speech-to-text transcript (made lessons: any word can be checked). Default: the acoustic hiss check. */
-  check?: 'stt';
+  /** `template`: a made lesson's word, matched against the template made from Mibo's clip for it (voice/wordcheck.ts). */
+  check?: 'template';
 };
 
 /** A picture game: Mibo asks, the child taps one of two pictures. */
@@ -329,14 +329,6 @@ export const TWISTY_WORDS: Step[] = [
   { kind: 'try', ex: word('twisty', 'hippopotamus', '🦛') },
   { kind: 'end', clip: 'tw_bye' },
 ];
-
-/**
- * Where a fresh lesson starts when a greeting was already played: a named
- * child hears "Hi {name}!" instead of the first line's "Hi friend!", so
- * that first line is skipped; anonymous children start at the first line.
- */
-export const firstStepAfterGreeting = (steps: Step[], hasGreeting: boolean): number =>
-  (hasGreeting && steps[0]?.kind === 'line' ? 1 : 0);
 
 /** Each lesson's steps, by the id the home screen uses (src/lesson/lessons.ts). */
 export const PLANS: Record<string, Step[]> = { 's-th': LESSON_1, sh: LESSON_SH, z: LESSON_Z, rhyme: RHYME_TIME, twisty: TWISTY_WORDS };

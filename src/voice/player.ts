@@ -52,9 +52,21 @@ function load(source: string | AudioBuffer): Promise<AudioBuffer> {
   return p;
 }
 
-/** Fetch and decode clips ahead of time. Failures are left for playClip to skip over. */
-export async function preload(sources: string[]): Promise<void> {
-  await Promise.all(sources.map(s => load(s).catch(() => {})));
+/** Fetch and decode clips ahead of time. Resolves false if any of them could not be loaded. */
+export async function preload(sources: string[]): Promise<boolean> {
+  const got = await Promise.all(sources.map(s => load(s).then(() => true, () => false)));
+  return got.every(Boolean);
+}
+
+/** Lets go of decoded audio (tens of MB after a few lessons). The browser's own cache keeps the files. */
+export function clearClips() {
+  buffers.clear();
+}
+
+/** How long sound takes to leave the speaker after the audio clock says it played (large on Bluetooth). */
+export function outputLatency(): number {
+  const c = audio();
+  return Math.min(0.5, Math.max(0, (c.outputLatency || 0) + (c.baseLatency || 0)));
 }
 
 /** A live line arrives as samples: no file, no decode. */
@@ -85,7 +97,7 @@ export async function playClip(puppet: Puppet, clip: Clip, extra: Partial<Segmen
     const src = c.createBufferSource();
     src.buffer = buf;
     src.connect(c.destination);
-    const t0 = c.currentTime + 0.03;
+    const t0 = c.currentTime + 0.03, late = outputLatency();
     let done = false;
     const finish = () => {
       if (done) return;
@@ -99,7 +111,7 @@ export async function playClip(puppet: Puppet, clip: Clip, extra: Partial<Segmen
     // if the browser never starts the audio (no tap yet), move on rather than hang
     const timer = setTimeout(finish, (buf.duration + 1.5) * 1000);
     current = { src, finish };
-    puppet.play([{ say: clip.text, visemes: clip.visemes, clock: () => Math.max(0, c.currentTime - t0), ...extra }]);
+    puppet.play([{ say: clip.text, visemes: clip.visemes, clock: () => Math.max(0, c.currentTime - t0 - late), ...extra }]);
     src.start(t0);
   });
 }

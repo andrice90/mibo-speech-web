@@ -1,8 +1,9 @@
 /**
  * Mibo's voice for new lines: Gemini text-to-speech (voice Leda) in the
  * cloud, through Firebase AI Logic. Speech needs a large model, so this is
- * the cloud half of the hybrid split; the text it speaks is Mibo's own line
- * or a grown-up-approved lesson line, never anything the child said.
+ * the cloud half of the hybrid split. It is only used in the grown-up zone,
+ * when a lesson is made: the text is a lesson line the grown-up approved,
+ * never anything the child said, and the kid zone only plays the saved audio.
  *
  * The audio comes back as raw PCM. It is trimmed and analysed here in the
  * browser, and the forced aligner (voice/lipsync.ts) works out Mibo's mouth
@@ -40,11 +41,6 @@ function fromBase64(b64: string): Uint8Array {
   return out;
 }
 
-// The free tier allows only so many voice lines a minute. After a refusal, stop asking for a while
-// (the lesson uses Mibo's bundled lines meanwhile) instead of hammering the quota.
-let restUntil = 0;
-export const voiceResting = () => Date.now() < restUntil;
-
 // A few lines at a time: a made lesson needs about ten.
 let active = 0;
 const waiting: (() => void)[] = [];
@@ -55,7 +51,7 @@ async function slot<T>(run: () => Promise<T>): Promise<T> {
 }
 
 async function synth(prompt: string): Promise<{ pcm: Uint8Array; sr: number }> {
-  const result = await withTimeout(ttsModel().generateContent(prompt), 20000, 'voice');
+  const result = await withTimeout(ttsModel().generateContent(prompt), 30000, 'voice');
   const part = result.response.inlineDataParts()?.[0]?.inlineData;
   if (!part?.data) throw new Error('no audio in the reply');
   let pcm = fromBase64(part.data);
@@ -66,16 +62,15 @@ async function synth(prompt: string): Promise<{ pcm: Uint8Array; sr: number }> {
 
 /**
  * Speaks one line in Mibo's voice. `note` adds a delivery direction for this
- * line only. Retries twice: the TTS model now and then answers with text
- * instead of audio. Throws when the voice cannot be made.
+ * line only. Retries twice (the TTS model now and then answers with text
+ * instead of audio) and waits out rate limits. Throws when the voice cannot be made.
  */
 export async function speak(text: string, opts: { note?: string; trim?: boolean } = {}): Promise<Speech> {
   if (!firebaseReady) throw new Error('Firebase is not configured');
-  if (voiceResting()) throw new Error('voice is resting after a quota refusal');
   const prompt = `${PROFILE}\n[Director's Notes: ${NOTES}${opts.note ? ` ${opts.note}` : ''}]\n${text}`;
   return slot(async () => {
     let last: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0, waits = 0; attempt < 3;) {
       try {
         const got = await synth(prompt);
         const pcm = opts.trim === false ? got.pcm : trimEdges(got.pcm, got.sr);
@@ -86,8 +81,10 @@ export async function speak(text: string, opts: { note?: string; trim?: boolean 
       } catch (e) {
         last = e;
         const status = (e as { customErrorData?: { status?: number } }).customErrorData?.status;
-        if (status === 429) { restUntil = Date.now() + 60_000; break; }
         if (status === 401 || status === 403) break;   // App Check or API setup: retrying will not help
+        // the free tier allows only so many voice lines a minute: wait and ask again (a lesson is made once, nobody is mid-lesson)
+        if (status === 429 && waits++ < 5) { await new Promise(r => setTimeout(r, 20_000)); continue; }
+        attempt++;
       }
     }
     throw last instanceof Error ? last : new Error('voice failed');

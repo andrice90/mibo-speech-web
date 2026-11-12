@@ -3,21 +3,23 @@ import { useEffect, useMemo, useState } from 'react';
 import { DEVICE_LABEL, deviceAiStatus, type DeviceAi } from '../ai/device';
 import { firebaseReady } from '../ai/firebase';
 import { writeNotes, type Notes } from '../ai/report';
-import { allResults, clearResults, summarise } from '../lesson/results';
-import { go, goHome } from '../lib/router';
+import { allResults, clearResults, summarise, wordsToBringBack } from '../lesson/results';
+import { go } from '../lib/router';
 import { readJson, writeJson } from '../lib/store';
 import { Bubble, Card, Column, Dialog, HomeButton, Spinner } from '../ui/kit';
 import { C, SOUND } from '../ui/theme';
 
-const KEY = 'mibo-notes-v1';
+const KEY = 'mibo-notes-v2';
 const pct = (n: number, of: number) => `${of ? (100 * n) / of : 0}%`;
 
 /**
- * For the grown-up: how practice is going. The counts are worked out here
- * from the on-device practice log. Mibo's notes are then written by the
- * model inside the browser, so the log never leaves the device; where there
- * is no such model, the grown-up can choose the cloud after seeing what
- * would be sent.
+ * Grown-up zone: how practice is going. The counts are worked out here from
+ * the practice log with plain code. Mibo's notes (what the counts mean, where
+ * the child struggled, what to focus on next) are written by the model
+ * inside the device, so the log never leaves it; where there is no such
+ * model, the grown-up can choose the cloud after seeing what would be sent.
+ * The notes then feed the cloud lesson planner with a short topic and the
+ * words worth bringing back.
  */
 export function Report() {
   const [results, setResults] = useState(allResults);
@@ -25,6 +27,9 @@ export function Report() {
   const [device, setDevice] = useState<DeviceAi | null>(null);
   const [notes, setNotes] = useState<Notes | null>(() => readJson<Notes | null>(KEY, null));
   const [busy, setBusy] = useState<'device' | 'cloud' | null>(null);
+  const bringBack = useMemo(() => wordsToBringBack(sum), [sum]);
+  const goHome = () => go('parent', {}, { replace: true });
+  const plan = (topic: string) => go('create', { topic, ...(bringBack.length ? { bringBack: bringBack.join(',') } : {}) });
   const [download, setDownload] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [askCloud, setAskCloud] = useState(false);
@@ -35,7 +40,7 @@ export function Report() {
   const write = async (where: 'device' | 'cloud') => {
     setAskCloud(false); setBusy(where); setError(''); setDownload(null);
     try {
-      const n = await writeNotes(sum, where, f => setDownload(f));
+      const n = await writeNotes(sum, where === 'cloud', f => setDownload(f));
       setNotes(n); writeJson(KEY, n);
     } catch (e) {
       console.warn('[notes]', e);
@@ -59,8 +64,8 @@ export function Report() {
         <div className="scroll"><div className="body">
           <h1 className="center" style={{ fontSize: 32, fontWeight: 700 }}>{"Mibo's notes 📒"}</h1>
           <p className="center soft" style={{ fontSize: 15, lineHeight: '21px' }}>
-            For the grown-up: how practice is going. These are practice notes, not an assessment, and everything on this page is
-            stored on this device only.
+            How practice is going and what to focus on next. These are practice notes, not an assessment, and everything on
+            this page is stored on this device only.
           </p>
 
           {sum.total === 0 ? (
@@ -68,7 +73,7 @@ export function Report() {
               <div style={{ fontSize: 44 }}>🌱</div>
               <h2>Nothing to read yet</h2>
               <p className="soft">Play a lesson with your child, then come back: Mibo keeps track of each word as you go.</p>
-              <div className="row"><Bubble label="Pick a lesson" bg={C.mint} deep={C.mintDeep} onPress={goHome} /></div>
+              <div className="row"><Bubble label="Back" bg={C.mint} deep={C.mintDeep} onPress={goHome} /></div>
             </Card>
           ) : (
             <>
@@ -112,15 +117,20 @@ export function Report() {
                     </span>
                     <p className="headline">{notes.headline}</p>
                     {notes.goingWell.length > 0 && <><h3>Going well</h3><ul>{notes.goingWell.map(x => <li key={x}>{x}</li>)}</ul></>}
-                    {notes.practiseNext.length > 0 && <><h3>Fun to play with next</h3><ul>{notes.practiseNext.map(x => <li key={x}>{x}</li>)}</ul></>}
+                    {notes.trickySpots.length > 0 && <><h3>Where it was tricky</h3><ul>{notes.trickySpots.map(x => <li key={x}>{x}</li>)}</ul></>}
+                    {notes.focusNext.length > 0 && <><h3>What to focus on next</h3><ul>{notes.focusNext.map(x => <li key={x}>{x}</li>)}</ul></>}
                     {notes.tip && <p className="tip">💡 {notes.tip}</p>}
                     {notes.lessonIdeas.length > 0 && (
                       <>
-                        <h3>Make a lesson from these notes</h3>
+                        <h3>Make the next lesson from these notes</h3>
                         <div className="chips">
-                          {notes.lessonIdeas.map(x => <button key={x} type="button" className="idea" onClick={() => go('create', { topic: x })}>✨ {x}</button>)}
+                          {notes.lessonIdeas.map(x => <button key={x} type="button" className="idea" onClick={() => plan(x)}>✨ {x}</button>)}
                         </div>
-                        <p className="note">Tapping an idea sends only that short topic to the cloud lesson planner, never the notes or the results.</p>
+                        <p className="note">
+                          {bringBack.length
+                            ? `An idea opens the lesson maker with that topic and the words that took more goes (${bringBack.join(', ')}). You choose what is sent to the cloud planner; the notes and the log are not.`
+                            : 'An idea opens the lesson maker with that topic. Only what you confirm there is sent to the cloud planner; the notes and the log are not.'}
+                        </p>
                       </>
                     )}
                     <p className="note">{`Written ${new Date(notes.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} by AI from Mibo's practice log. It can be wrong: you know your child best.`}</p>
@@ -153,8 +163,8 @@ export function Report() {
                 ) : (
                   <>
                     <p className="note">
-                      This browser has no built-in AI model, so the notes cannot be written on the device. (Desktop Chrome has one.)
-                      The counts above are still worked out here.
+                      This device has no built-in AI model, so the notes cannot be written on it. The counts above are still
+                      worked out here.
                     </p>
                     <div className="row">
                       <Bubble small label={notes ? 'Write fresh notes in the cloud…' : 'Write the notes in the cloud…'} bg={C.sky} deep="#2f7fb8"
@@ -174,8 +184,8 @@ export function Report() {
             <div className="big">☁️</div>
             <h2>Send the practice counts to the cloud?</h2>
             <p>
-              To write the notes, Gemini (through Firebase) would be sent the words practised and how many goes each took.
-              No audio, no name, nothing else. It is used once to write the notes.
+              To write the notes, Gemini (through Firebase) would be sent the counts on this page: the lesson names, the
+              words practised, how many goes each took, and what Mibo's listening heard. No audio and no name.
             </p>
             <div className="row"><Bubble label="Yes, write the notes" bg={C.sky} deep="#2f7fb8" onPress={() => void write('cloud')} /></div>
             <div className="row"><Bubble small label="No, keep it on this device" bg={C.mint} deep={C.mintDeep} onPress={() => setAskCloud(false)} /></div>

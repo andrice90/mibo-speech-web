@@ -7,13 +7,14 @@ import { C } from './theme';
 const POINTS: [string, string, string][] = [
   ['👀', C.sky, 'Stay with your child. ◀ ▶ redo or skip any step.'],
   ['🌱', C.mint, 'A practice buddy, not a speech therapist. No diagnosis.'],
-  ['✨', C.butter, "Mibo's replies and notes are written by AI."],
+  ['✨', C.butter, 'Lessons use no AI. Notes and new lessons, in the grown-up zone, are AI-written.'],
   ['🔒', C.rose, 'Listening happens on this device only. Voices are never kept or sent.'],
 ];
 
 /**
  * The grown-up's consent card: supervision points, the "I'm a grown-up"
- * tick, and the listen switch. Shown once, at first app start.
+ * tick, and the listen switch. Shown once, at first app start, before the
+ * grown-up chooses the PIN.
  * `onDone` gets the listen choice; the caller saves it (lesson/consent.ts).
  */
 export function ConsentCard({ buttonLabel, onDone }: { buttonLabel: string; onDone: (hear: boolean) => void }) {
