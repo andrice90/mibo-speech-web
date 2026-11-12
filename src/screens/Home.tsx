@@ -32,20 +32,18 @@ export function Home() {
   return (
     <div className="screen">
       <Column>
-        {setup === 'done' && (
-          <div className="top-right">
+        <div className="hero">
+          <div className="mini"><MiboStage puppet={puppet} /></div>
+          <div className="hero-text">
+            <h1>Mibo</h1>
+            <p>{setup === 'done' ? 'Pick a lesson to play' : 'First, a grown-up sets things up'}</p>
+          </div>
+          {setup === 'done' && (
             <button type="button" className="zone-btn" onClick={() => go('parent')}>
               <span className="lock">🔒</span>
               <span><b>Grown-up Zone</b><small>New lessons, progress reports</small></span>
             </button>
-          </div>
-        )}
-        <div className="hero">
-          <div className="mini"><MiboStage puppet={puppet} /></div>
-          <div>
-            <h1>Mibo</h1>
-            <p>{setup === 'done' ? 'Pick a lesson to play' : 'First, a grown-up sets things up'}</p>
-          </div>
+          )}
         </div>
         <div className="scroll"><div className="list">
           {setup !== 'done' && <Onboarding from={setup} onDone={() => setSetup('done')} />}
