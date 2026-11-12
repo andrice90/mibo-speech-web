@@ -129,7 +129,7 @@ export function Lesson({ params }: { params: Record<string, string> }) {
 
               <Card tint={listening ? C.lavender : C.card} className="parent">
                 <div className="nav-row">
-                  <Arrow dir="back" bg={C.peachDeep} deep="#c45f3c" onPress={() => nav('back')} />
+                  <Arrow dir="back" bg={C.lavenderDeep} deep="#5a45a8" onPress={() => nav('back')} />
                   <div className="status">
                     {listening && ui.mic ? (
                       <div className="meter">

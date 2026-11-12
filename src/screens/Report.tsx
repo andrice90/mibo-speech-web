@@ -6,7 +6,7 @@ import { writeNotes, type Notes } from '../ai/report';
 import { allResults, clearResults, summarise, wordsToBringBack } from '../lesson/results';
 import { go } from '../lib/router';
 import { loadNotes, saveNotes } from '../lesson/notes';
-import { Bubble, Card, Column, Dialog, HomeButton } from '../ui/kit';
+import { Bubble, Card, Column, Dialog, ZoneBar } from '../ui/kit';
 import { Working } from '../ui/Working';
 import { C, SOUND } from '../ui/theme';
 
@@ -32,7 +32,7 @@ export function Report() {
   const [notes, setNotes] = useState<Notes | null>(loadNotes);
   const [busy, setBusy] = useState<'device' | 'cloud' | null>(null);
   const bringBack = useMemo(() => wordsToBringBack(sum), [sum]);
-  const goHome = () => go('parent', {}, { replace: true });
+  const goHome = () => go('parent', {}, { replace: true });   // one step up: the dashboard
   const plan = (topic: string) => go('create', { topic, ...(bringBack.length ? { bringBack: bringBack.join(',') } : {}) });
   const [download, setDownload] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -63,9 +63,8 @@ export function Report() {
   return (
     <div className="screen">
       <Column>
-        <HomeButton floating onPress={goHome} />
+        <ZoneBar title="Mibo's notes" onBack={goHome} />
         <div className="scroll"><div className="body">
-          <h1 className="center" style={{ fontSize: 32, fontWeight: 700 }}>{"Mibo's notes 📒"}</h1>
           <p className="center soft" style={{ fontSize: 15, lineHeight: '21px' }}>
             How practice is going and what to focus on next. These are practice notes, not an assessment, and everything on
             this page is stored on this device only.

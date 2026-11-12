@@ -8,7 +8,7 @@ import { loadNotes, practiceSinceNotes } from '../lesson/notes';
 import { allResults, summarise, wordsToBringBack } from '../lesson/results';
 import { go, goHome } from '../lib/router';
 import { lock, setPin, validPin } from '../lib/zone';
-import { Bubble, Card, Column, Dialog } from '../ui/kit';
+import { Bubble, Card, Column, Dialog, ZoneBar } from '../ui/kit';
 import { MicSwitch } from '../ui/MicSwitch';
 import { PinPad } from '../ui/PinPad';
 import { C } from '../ui/theme';
@@ -22,7 +22,7 @@ const ago = (at: number) => {
  * The grown-up zone, as a dashboard: practice at a glance, whether there is
  * new practice Mibo has not written notes on yet, the lesson his notes
  * suggest next, and the lessons already made. Settings sit behind the gear.
- * "My child is ready" locks the zone and hands the device back.
+ * "Back to Mibo" locks the zone and hands the device back.
  */
 export function Parent() {
   const [made, setMade] = useState<CustomLesson[]>(listCustomLessons);
@@ -47,13 +47,10 @@ export function Parent() {
   return (
     <div className="screen">
       <Column>
-        <div className="zone-bar">
-          <h1>Grown-up zone</h1>
-          <button type="button" className="home-btn" onClick={() => { setPinSaved(false); setSettings(true); }} aria-label="Settings">⚙️</button>
-        </div>
+        <ZoneBar title="Grown-up zone" onBack={() => { lock(); goHome(); }}>
+          <button type="button" className="nav-pill icon" onClick={() => { setPinSaved(false); setSettings(true); }} aria-label="Settings">⚙️</button>
+        </ZoneBar>
         <div className="scroll"><div className="list">
-          <div className="row"><Bubble label="My child is ready ▶" bg={C.mint} deep={C.mintDeep} onPress={() => { lock(); goHome(); }} /></div>
-
           <div className="tiles">
             <div className="tile"><b>{sum.total}</b><span>words and games practised</span></div>
             <div className="tile"><b>{said ? `${Math.round((100 * first) / said)}%` : '–'}</b><span>said right first try</span></div>
@@ -91,7 +88,7 @@ export function Parent() {
                 <p className="soft">From his notes, Mibo suggests:</p>
                 <p className="dash-quote">{idea}</p>
                 {bringBack.length > 0 && <p className="note">{`Bringing back the words that took more goes: ${bringBack.join(', ')}.`}</p>}
-                <div className="row"><Bubble small label="Make this lesson" bg={C.rose} deep={C.roseDeep} onPress={() => plan(idea)} /></div>
+                <div className="row"><Bubble small label="Make this lesson" bg={C.mint} deep={C.mintDeep} onPress={() => plan(idea)} /></div>
                 {notes!.lessonIdeas.length > 1 && (
                   <div className="chips">
                     {notes!.lessonIdeas.slice(1).map(x => <button key={x} type="button" className="idea" onClick={() => plan(x)}>✨ {x}</button>)}
@@ -104,7 +101,7 @@ export function Parent() {
                 <p className="soft">
                   {sum.total > 0 ? "Once Mibo has written his notes, he will suggest a lesson that fits. Or choose the words yourself." : 'Choose the words; Mibo plans the lesson and gives it his voice.'}
                 </p>
-                <div className="row"><Bubble small label="Make a new lesson" bg={C.rose} deep={C.roseDeep} onPress={() => plan()} /></div>
+                <div className="row"><Bubble small label="Make a new lesson" bg={C.mint} deep={C.mintDeep} onPress={() => plan()} /></div>
               </>
             )}
           </Card>
@@ -122,6 +119,7 @@ export function Parent() {
             </Card>
           )}
         </div></div>
+        <div className="zone-foot row"><Bubble label="Back to Mibo" bg={C.mint} deep={C.mintDeep} onPress={() => { lock(); goHome(); }} /></div>
 
         {settings && !newPin && (
           <Dialog onClose={() => setSettings(false)}>

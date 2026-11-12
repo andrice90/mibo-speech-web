@@ -7,7 +7,7 @@ import { newLessonId, saveCustomLesson, type CustomLesson } from '../lesson/cust
 import { clipTexts, TOPIC_MAX, validTopic, type LessonPlan } from '../lesson/plan';
 import { go } from '../lib/router';
 import { deleteAudio, putAudio } from '../lib/store';
-import { Bubble, Card, Column, HomeButton } from '../ui/kit';
+import { Bubble, Card, Column, ZoneBar } from '../ui/kit';
 import { Working } from '../ui/Working';
 import { C } from '../ui/theme';
 import { makeTemplate, type Templates } from '../voice/wordcheck';
@@ -98,9 +98,8 @@ export function Create({ params }: { params: Record<string, string> }) {
   return (
     <div className="screen">
       <Column>
-        <HomeButton floating onPress={() => go('parent', {}, { replace: true })} />
+        <ZoneBar title="Make a new lesson" onBack={() => go('parent', {}, { replace: true })} />
         <div className="scroll"><div className="body">
-          <h1 className="center" style={{ fontSize: 32, fontWeight: 700 }}>Make a new lesson ✨</h1>
           <p className="center soft" style={{ fontSize: 15, lineHeight: '21px' }}>
             Tell Mibo what words to work on. Gemini writes a plan in the cloud for you to check. Only what you see on this
             page is sent, and nothing is made until you say yes.
@@ -160,7 +159,7 @@ export function Create({ params }: { params: Record<string, string> }) {
                 <Bubble label="Yes, make the voice" bg={C.mint} deep={C.mintDeep} onPress={() => void accept()} />
               </div>
               <div className="row">
-                <Bubble small label="Try different words" bg={C.peach} deep={C.peachDeep}
+                <Bubble small label="Try different words" bg={C.lavender} deep={C.lavenderDeep}
                   onPress={() => { setStage('ask'); setPlan(null); }} />
               </div>
               <div className="row">

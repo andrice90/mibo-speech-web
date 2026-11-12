@@ -65,14 +65,14 @@ export function Home() {
                 );
               })}
               {made.map(l => (
-                <button key={l.id} type="button" className="lesson" style={{ backgroundColor: C.rose, borderColor: C.roseDeep }}
+                <button key={l.id} type="button" className="lesson" style={{ backgroundColor: C.teal, borderColor: C.tealDeep }}
                   aria-label={`${l.plan.title}: ${l.plan.subtitle}`} onClick={() => go('lesson', { custom: l.id, listen: listenParam() })}>
                   <span className="badge">{l.plan.emoji}</span>
                   <span className="text">
-                    <span className="title" style={{ color: C.roseDeep }}>{l.plan.title}</span>
+                    <span className="title" style={{ color: C.tealDeep }}>{l.plan.title}</span>
                     <span className="subtitle">{l.plan.subtitle}</span>
                   </span>
-                  <span className="go" style={{ color: C.roseDeep }}>Play</span>
+                  <span className="go" style={{ color: C.tealDeep }}>Play</span>
                 </button>
               ))}
             </>
@@ -85,7 +85,7 @@ export function Home() {
             <h2>Pick up where you left off?</h2>
             <p>{`${ask.title}, step ${(saved[ask.id]?.step ?? 0) + 1} of ${ask.steps}`}</p>
             <div className="row"><Bubble label="Continue" bg={C.mint} deep={C.mintDeep} onPress={() => open(ask, true)} /></div>
-            <div className="row"><Bubble small label="Start over" bg={C.peach} deep={C.peachDeep} onPress={() => open(ask, false)} /></div>
+            <div className="row"><Bubble small label="Start over" bg={C.lavender} deep={C.lavenderDeep} onPress={() => open(ask, false)} /></div>
           </Dialog>
         )}
       </Column>

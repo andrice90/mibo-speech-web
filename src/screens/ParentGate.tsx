@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { goHome } from '../lib/router';
 import { hasPin, pinPause, resetEverything, unlock, useParentZone } from '../lib/zone';
-import { Bubble, Card, Column, Dialog, HomeButton } from '../ui/kit';
+import { Bubble, Card, Column, Dialog, ZoneBar } from '../ui/kit';
 import { PinPad } from '../ui/PinPad';
 import { C } from '../ui/theme';
 
@@ -23,7 +23,7 @@ export function ParentGate({ children }: { children: ReactNode }) {
   return (
     <div className="screen">
       <Column max={420}>
-        <HomeButton floating onPress={goHome} />
+        <ZoneBar title="Grown-up zone" onBack={goHome} />
         <div className="scroll"><div className="body">
           <Card>
             <PinPad title="Grown-ups only 🔒"

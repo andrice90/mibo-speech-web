@@ -14,6 +14,9 @@ export const C = {
   butter: '#ffe999',
   butterDeep: '#d9a514',
   sky: '#d4efff',
+  teal: '#c8f1ee',
+  tealDeep: '#1f8a86',
+  /** Red is kept for destructive actions (delete, clear, reset). */
   rose: '#ffc7d6',
   roseDeep: '#c94f7c',
   white: '#ffffff',
@@ -27,5 +30,5 @@ export const SOUND = {
   z: { bg: C.butter, deep: C.butterDeep, name: 'Buzzy sound (z)' },
   rhyme: { bg: C.peach, deep: C.peachDeep, name: 'Rhyming pairs' },
   twisty: { bg: C.sky, deep: '#2f7fb8', name: 'Twisty words' },
-  custom: { bg: C.rose, deep: C.roseDeep, name: 'Made-lesson words' },
+  custom: { bg: C.teal, deep: C.tealDeep, name: 'Made-lesson words' },
 };

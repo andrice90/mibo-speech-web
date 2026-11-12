@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 
+import { goHome } from '../lib/router';
+import { lock } from '../lib/zone';
 import { C } from './theme';
 
 /** Keeps a screen to a readable, thumb-friendly width on tablets and desktops: centred, full width on phones. */
@@ -71,6 +73,24 @@ export function Dialog({ children, onClose }: { children: ReactNode; onClose: ()
   return (
     <div className="scrim" onClick={onClose}>
       <div className="card dialog" style={{ backgroundColor: C.card }} onClick={e => e.stopPropagation()}>{children}</div>
+    </div>
+  );
+}
+
+/**
+ * The bar across the top of every grown-up page: Back on the left (one step
+ * up), the page's name, and Home on the right, which always locks the zone
+ * and returns to Mibo's lessons. `children` sit just left of Home.
+ */
+export function ZoneBar({ title, onBack, children }: { title: string; onBack: () => void; children?: ReactNode }) {
+  return (
+    <div className="zone-bar">
+      <button type="button" className="nav-pill" onClick={onBack}>‹ Back</button>
+      <h1>{title}</h1>
+      <div className="zone-right">
+        {children}
+        <button type="button" className="nav-pill icon" onClick={() => { lock(); goHome(); }} aria-label="Home: back to Mibo">🏠</button>
+      </div>
     </div>
   );
 }

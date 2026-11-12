@@ -124,7 +124,7 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 .title-block h1 { font-weight: 700; font-size: 32px; line-height: 1.15; }
 .title-block p { font-size: 16px; color: var(--soft); margin-top: 2px; }
 .sheet { padding: 0 16px 10px; display: flex; flex-direction: column; gap: 12px; }
-.body { padding: 56px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+.body { padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
 .stack { display: flex; flex-direction: column; gap: 10px; }
 .input {
   font-weight: 600; font-size: 20px; color: var(--ink); background: var(--lavender); border-radius: 18px; border: 0; outline: 0;
@@ -207,7 +207,7 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 .tag.cloud { background: var(--sky); color: #2a6a99; }
 .progress { height: 10px; border-radius: 5px; background: var(--lavender); overflow: hidden; }
 .progress i { display: block; height: 100%; background: var(--lavender-deep); transition: width 200ms; }
-.idea { background: var(--rose); border-radius: 999px; padding: 9px 14px; font-weight: 600; font-size: 14px; color: var(--rose-deep); }
+.idea { background: var(--sky); border-radius: 999px; padding: 9px 14px; font-weight: 600; font-size: 14px; color: #2a6a99; }
 
 /* ---- PIN and the grown-up zone */
 .pinpad { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
@@ -252,8 +252,15 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 }
 .zone-btn b { display: block; font-weight: 700; font-size: 17px; color: var(--lavender-deep); line-height: 1.15; }
 .zone-btn small { display: block; font-weight: 500; font-size: 12.5px; color: var(--soft); line-height: 1.3; }
-.zone-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 16px 0; }
-.zone-bar h1 { font-weight: 700; font-size: 26px; }
+.zone-bar { display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px; }
+.zone-bar h1 { flex: 1; min-width: 0; font-weight: 700; font-size: 22px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zone-right { display: flex; align-items: center; gap: 8px; flex: none; }
+.nav-pill {
+  flex: none; height: 42px; padding: 0 14px; border-radius: 21px; background: #fff; font-weight: 700; font-size: 15px; color: var(--lavender-deep);
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(107, 90, 142, 0.14);
+}
+.nav-pill.icon { width: 42px; padding: 0; font-size: 20px; }
+.zone-foot { padding: 10px 16px 4px; }
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; }
 .setting button.link { color: var(--lavender-deep); font-weight: 600; text-decoration: underline; flex: none; }
 .made-row { display: flex; align-items: center; gap: 10px; font-size: 15px; }
@@ -278,7 +285,7 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 .tile span { display: block; font-size: 12.5px; line-height: 16px; color: var(--soft); margin-top: 3px; }
 .dash-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .badge-new, .badge-ok { border-radius: 999px; padding: 4px 11px; font-weight: 700; font-size: 12.5px; white-space: nowrap; }
-.badge-new { background: var(--peach); color: #b9502b; }
+.badge-new { background: var(--butter); color: #8a6508; }
 .badge-ok { background: var(--mint); color: #1f6f52; }
 .dash-quote { font-weight: 600; font-size: 18px; line-height: 24px; }
 .dash .chips { margin-top: 2px; }
@@ -286,7 +293,8 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 @media (max-width: 360px) {
   .tile b { font-size: 23px; }
   .tile span { font-size: 11.5px; }
-  .zone-bar h1 { font-size: 23px; }
+  .zone-bar h1 { font-size: 18px; }
+  .nav-pill { padding: 0 10px; font-size: 14px; }
   .pin-keys { grid-template-columns: repeat(3, 64px); gap: 10px; }
   .pin-keys button { height: 58px; }
   .title-block { padding: 12px 52px 0; }
@@ -295,7 +303,7 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 /* ---- first use */
 .steps { display: flex; justify-content: center; gap: 8px; }
 .steps i { width: 10px; height: 10px; border-radius: 5px; background: #e6dccb; transition: width 150ms; }
-.steps i.now { width: 26px; background: var(--peach-deep); }
+.steps i.now { width: 26px; background: var(--lavender-deep); }
 .steps i.done { background: var(--mint-deep); }
 .mic-switch { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .mic-help { font-size: 13px; line-height: 18px; color: var(--soft); padding: 0 4px; }
