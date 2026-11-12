@@ -104,14 +104,47 @@ function dtw(a: Float64Array[], b: number[][]): number {
 }
 
 /**
+ * Like dtw(), but the try may line up with just the end of the template.
+ * A made lesson's template comes from Mibo's model line, where the whole
+ * word comes last ("Buh... ball! Ball!") and the lead-in sometimes runs
+ * into it; the child only says the word.
+ */
+function dtwEnd(a: Float64Array[], b: number[][]): number {
+  const n = a.length, m = b.length;
+  if (!n || !m) return Infinity;
+  let prev = new Float64Array(m + 1), cur = new Float64Array(m + 1);   // row 0 is all zero: start anywhere in the template
+  for (let i = 1; i <= n; i++) {
+    cur[0] = Infinity;
+    for (let j = 1; j <= m; j++) {
+      let s = 0;
+      const fa = a[i - 1], fb = b[j - 1];
+      for (let k = 0; k < 12; k++) { const d = fa[k] - fb[k]; s += d * d; }
+      cur[j] = Math.sqrt(s) + Math.min(prev[j], cur[j - 1], prev[j - 1]);
+    }
+    [prev, cur] = [cur, prev];
+  }
+  return prev[m] / (2 * n);
+}
+
+/**
+ * How sure a made lesson's word check has to be before it asks for another
+ * go: only when a different word from the same lesson is clearly closer.
+ * These templates come from one voice (Mibo's) and are compared with any
+ * family's voices and microphones, so "not sure" counts as a pass and the
+ * grown-up's arrows have the last word.
+ */
+export const MADE_T = { clearlyOther: 1.15 };
+
+/**
  * Judge one listening window against `target` (a built-in twisty word, or a word in `extra`).
  * Every speech run is tried, plus all runs spliced together, so both a
  * whole-word try and a chunk-by-chunk try get their chance; the attempt
  * closest to the target decides.
  */
 export function judgeWord(x: Float32Array, sr: number, target: string, extra: Templates = {}): WordVerdict {
-  // a made lesson brings its own words; the built-in ones stay in as words it must not be confused with
-  const all: Templates = { ...TEMPLATES, ...extra }, words = Object.keys(all);
+  // a made lesson's word is compared with that lesson's other words; a built-in twisty word with the other built-in ones
+  const made = !!extra[target];
+  const all: Templates = made ? extra : TEMPLATES, words = Object.keys(all);
   const runs = speechRuns(x, sr);
   if (!runs.length || !all[target]) return { speech: false, match: null };
   const pad = Math.round(0.05 * sr);
@@ -126,12 +159,14 @@ export function judgeWord(x: Float32Array, sr: number, target: string, extra: Te
   for (const c of candidates) {
     const feats = framesOf(c, sr);
     if (feats.length < 15) continue;
-    const dists = Object.fromEntries(words.map(w => [w, +dtw(feats, all[w]).toFixed(2)]));
+    const dists = Object.fromEntries(words.map(w => [w, +(made ? dtwEnd : dtw)(feats, all[w]).toFixed(2)]));
     const ranked = Object.entries(dists).sort((p, q) => p[1] - q[1]);
     const [word, d] = ranked[0], second = ranked[1]?.[1] ?? Infinity;
     const v: WordVerdict = {
       speech: true, best: word, dists,
-      match: word === target && d <= WORD_T.abs && d <= second * WORD_T.ratio,
+      match: made
+        ? (word === target ? true : dists[target] > d * MADE_T.clearlyOther ? false : null)
+        : word === target && d <= WORD_T.abs && d <= second * WORD_T.ratio,
     };
     if (!best || (dists[target] ?? Infinity) < (best.dists?.[target] ?? Infinity)) best = v;
   }

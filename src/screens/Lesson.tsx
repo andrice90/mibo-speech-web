@@ -137,6 +137,8 @@ export function Lesson({ params }: { params: Record<string, string> }) {
                           <i key={i} className={ui.level > th ? 'on' : ''} style={{ height: 12 + i * 7 }} />
                         ))}
                       </div>
+                    ) : ui.heard && ui.phase !== 'stuck' ? (
+                      <div className="where">{ui.heard}</div>
                     ) : ui.phase === 'stuck' ? (
                       <button type="button" className="where" onClick={resume}>Mibo's voice could not load. Check the connection, then tap here.</button>
                     ) : null}

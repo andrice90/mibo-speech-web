@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Puppet, Segment } from '../puppet/mibo';
-import { judgeTry, type TryVerdict, type Verdict } from '../voice/judge';
+import { judgeTry, type TryVerdict } from '../voice/judge';
 import { enableMic, listen, micPermission, type Listening } from '../voice/listen';
 import { outputLatency, playClip, stopAudio, type Clip } from '../voice/player';
 import { judgeWord, type Templates } from '../voice/wordcheck';
@@ -21,9 +21,21 @@ export type LessonUi = {
   picked: { i: number; ok: boolean } | null;   // the picture tapped (or shown as the answer)
   mic: boolean;            // listening with the microphone (else the arrows stand in)
   level: number;           // live mic level 0..1 while listening
+  heard: string;           // what the check made of the last try, in a few words, for the grown-up
 };
 
 class Stopped extends Error {}
+
+const SOUND_SAID: Record<string, string> = { s: 'an “s” sound', th: 'a “th” sound', sh: 'a “sh” sound', z: 'a “z” sound', stop: 'a short “t” sound' };
+/** The check's verdict in a few words for the grown-up, who can overrule it with the arrows. */
+function describe(v: (TryVerdict & { word?: string }) | undefined, ex: Exercise): string {
+  if (!v) return '';
+  if (v.match === true) return v.heard !== 'none' ? `Mibo heard ${SOUND_SAID[v.heard] ?? v.heard} ✓` : 'Mibo heard it ✓';
+  if (v.match === null) return 'Mibo was not sure, so it counts';
+  if (v.word && v.word !== ex.target) return `Mibo thought it sounded more like “${v.word}”. Tap ▶ if it was right.`;
+  if (v.heard !== 'none') return `Mibo heard ${SOUND_SAID[v.heard] ?? v.heard}. Tap ▶ if it was right.`;
+  return 'Mibo could not hear the sound clearly. Tap ▶ if it was right.';
+}
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -61,7 +73,7 @@ export function useLesson(puppet: Puppet, opts: {
 }) {
   const { steps } = opts;
   const [ui, setUi] = useState<LessonUi>({
-    phase: 'idle', step: opts.from ?? 0, ex: null, stars: opts.stars ?? 0, pick: null, picked: null, mic: false, level: 0,
+    phase: 'idle', step: opts.from ?? 0, ex: null, stars: opts.stars ?? 0, pick: null, picked: null, mic: false, level: 0, heard: '',
   });
   const stars = useRef(opts.stars ?? 0);
   const hooks = useRef(opts);
@@ -102,14 +114,14 @@ export function useLesson(puppet: Puppet, opts: {
      * starts recording with the prompt, so a child who jumps in is caught,
      * but only what comes after Mibo stops talking is judged.
      */
-    const waitTry = async (ex: Exercise, useMic: boolean, prompt: string | null): Promise<{ nav?: Nav; verdict?: Verdict }> => {
+    const waitTry = async (ex: Exercise, useMic: boolean, prompt: string | null): Promise<{ nav?: Nav; verdict?: TryVerdict & { word?: string } }> => {
       const nav = new Promise<Nav>(res => { navWait.current = res; });
       let last = 0;
       const l = useMic
         ? listen({ armed: false, onLevel: v => { const now = Date.now(); if (now - last > 90) { last = now; set({ level: v }); } } })
         : null;
       mic.current = l;
-      const quit = (r: { nav?: Nav; verdict?: Verdict }) => { l?.stop(); mic.current = null; navWait.current = null; set({ level: 0 }); return r; };
+      const quit = (r: { nav?: Nav; verdict?: TryVerdict & { word?: string } }) => { l?.stop(); mic.current = null; navWait.current = null; set({ level: 0 }); return r; };
       if (prompt) {
         set({ phase: 'talking' });
         const early = await Promise.race([nav.then(n => ({ nav: n })), play(prompt).then(() => null)]);
@@ -126,12 +138,13 @@ export function useLesson(puppet: Puppet, opts: {
       quit({});
       const h = got.h;
       if (!h.speech) return {};
-      let verdict: TryVerdict;
+      let verdict: TryVerdict & { word?: string };
       if (ex.sound === 'twisty' || ex.check === 'template') {
         // whole-word check: the said word must be closest to the target word's template
         const w = judgeWord(h.samples, h.sr, ex.target, hooks.current.templates);
-        console.log(`[hear-word] ${ex.target}: ${w.match ? 'PASS' : w.match === false ? 'other word' : '?'} best=${w.best ?? '-'}`);
-        verdict = { heard: 'none', match: w.match, speech: true, words: [] };
+        console.log(`[hear-word] ${ex.target}: ${w.match ? 'PASS' : w.match === false ? 'other word' : '?'} best=${w.best ?? '-'} ` +
+          (w.dists ? Object.entries(w.dists).map(([k, d]) => `${k}:${d}`).join(' ') : ''));
+        verdict = { heard: 'none', match: w.match, speech: true, words: [], word: w.best };
       } else if (ex.sound === 'rhyme' || ex.sound === 'custom') {
         // a rhyme cannot be heard by the check, and a made word with no template has nothing to match: any words count
         verdict = { heard: 'none', match: true, speech: true, words: [] };
@@ -145,14 +158,14 @@ export function useLesson(puppet: Puppet, opts: {
     };
 
     const tryExercise = async (ex: Exercise, useMic: boolean) => {
-      set({ ex });
+      set({ ex, heard: '' });
       const heardList: string[] = [];   // other sounds Mibo's ears named across this word's goes
       for (let attempt = 1; attempt <= MAX_ATTEMPTS;) {
         set({ phase: 'talking' });
         puppet.setMood('neutral');
         if (attempt === 1) await play(ex.cue ?? pick('watch'));
         await play(ex.model, { watchAll: true });
-        let result: { nav?: Nav; verdict?: Verdict } = {};
+        let result: { nav?: Nav; verdict?: TryVerdict & { word?: string } } = {};
         for (let nudges = 0; ; nudges++) {
           // first "your turn" (or the nudge after a silence) plays while the mic is already recording
           const prompt = nudges === 0 ? (attempt === 1 ? ex.prompt : pick('yourTurn')) : nudges === 1 ? pick('yourTurn') : null;
@@ -164,6 +177,7 @@ export function useLesson(puppet: Puppet, opts: {
 
         const v = result.verdict;
         const ok = result.nav === 'fwd' || !v || v.match !== false;
+        set({ heard: result.nav ? '' : describe(v, ex) });
         if (v && v.heard !== 'none' && v.heard !== ex.sound && !heardList.includes(v.heard)) heardList.push(v.heard);
         const last = ok || attempt === MAX_ATTEMPTS;
         // logged before Mibo answers, so skipping ahead during his line never loses the result
