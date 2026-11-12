@@ -1,30 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { hasConsent, loadConsent, saveConsent } from '../lesson/consent';
+import { hasConsent, loadConsent } from '../lesson/consent';
 import { listCustomLessons } from '../lesson/custom';
 import { LESSONS, type LessonInfo } from '../lesson/lessons';
 import { loadProgress } from '../lesson/progress';
 import { go } from '../lib/router';
-import { hasPin, lock, setPin, validPin } from '../lib/zone';
+import { hasPin, lock } from '../lib/zone';
 import { MiboStage } from '../puppet/MiboStage';
 import { newPuppet } from '../puppet/mibo';
-import { ConsentCard } from '../ui/ConsentCard';
-import { Bubble, Card, Column, Dialog } from '../ui/kit';
-import { PinPad } from '../ui/PinPad';
+import { Bubble, Column, Dialog } from '../ui/kit';
+import { Onboarding } from '../ui/Onboarding';
 import { C } from '../ui/theme';
 
 /**
  * Home is the kid zone: the lessons, and where each one was left off. On
- * first use the grown-up agrees to the ground rules and chooses the PIN
- * that guards the grown-up zone. Opening this screen always locks that zone.
+ * first use it shows the three-step setup for the grown-up (ui/Onboarding). Opening this screen always locks that zone.
  */
 export function Home() {
   const puppet = useMemo(newPuppet, []);
   const saved = useMemo(() => Object.fromEntries(LESSONS.map(l => [l.id, loadProgress(l.id)])), []);
   const made = useMemo(listCustomLessons, []);
   const [ask, setAsk] = useState<LessonInfo | null>(null);
-  const [setup, setSetup] = useState<'consent' | 'pin' | 'done'>(() => (!hasConsent() ? 'consent' : !hasPin() ? 'pin' : 'done'));
-  const [first, setFirst] = useState('');   // the PIN as first typed, waiting to be typed again
+  const [setup, setSetup] = useState<'welcome' | 'pin' | 'done'>(() => (!hasConsent() ? 'welcome' : !hasPin() ? 'pin' : 'done'));
 
   useEffect(lock, []);
 
@@ -43,20 +40,7 @@ export function Home() {
           </div>
         </div>
         <div className="scroll"><div className="list">
-          {setup === 'consent' && (
-            <ConsentCard buttonLabel="Next" onDone={hear => { saveConsent(hear); setSetup(hasPin() ? 'done' : 'pin'); }} />
-          )}
-          {setup === 'pin' && (
-            <Card>
-              <PinPad key={first ? 'again' : 'first'} title={first ? 'Type it once more' : 'Choose a grown-up PIN 🔒'}
-                hint={first ? 'Just to be sure.' : "Four digits. It opens the grown-up zone, where lessons are made and Mibo's notes are kept."}
-                onEntered={async pin => {
-                  if (!first) { if (!validPin(pin)) return false; setFirst(pin); return true; }
-                  if (pin !== first) { setFirst(''); return false; }
-                  await setPin(pin); setSetup('done'); return true;
-                }} />
-            </Card>
-          )}
+          {setup !== 'done' && <Onboarding from={setup} onDone={() => setSetup('done')} />}
           {setup === 'done' && (
             <>
               {LESSONS.map(l => {

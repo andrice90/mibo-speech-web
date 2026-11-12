@@ -59,6 +59,7 @@ export function Lesson({ params }: { params: Record<string, string> }) {
   const sound = ui.ex ? SOUND[ui.ex.sound] : ui.pick ? SOUND[ui.pick.sound] : sounds[ui.step];
   const badge = ui.ex ? { emoji: ui.ex.emoji, word: ui.ex.target } : ui.pick?.word ?? null;
   const bubble = ui.phase === 'loading' ? 'Getting my voice ready…' : ui.phase === 'stuck' ? '…'
+    : ui.phase === 'asking' ? 'Grown-up: your browser is asking to use the microphone. Choose “Allow” in the pop-up near the address bar.'
     : listening ? 'Your turn!' : ui.phase === 'thinking' ? caption || '…' : caption;
 
   return (

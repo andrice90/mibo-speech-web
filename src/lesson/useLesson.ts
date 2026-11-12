@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Puppet, Segment } from '../puppet/mibo';
 import { judgeTry, type TryVerdict, type Verdict } from '../voice/judge';
-import { enableMic, listen, type Listening } from '../voice/listen';
+import { enableMic, listen, micPermission, type Listening } from '../voice/listen';
 import { outputLatency, playClip, stopAudio, type Clip } from '../voice/player';
 import { judgeWord, type Templates } from '../voice/wordcheck';
 import { bundled, preloadClips } from './clips';
@@ -10,8 +10,11 @@ import { clipsFor, MAX_ATTEMPTS, MAX_PICKS, VARIANTS, type Exercise, type LineId
 import { logResult } from './results';
 
 export type Nav = 'fwd' | 'back';
-/** `stuck`: Mibo's voice for this lesson could not be loaded (offline before it was ever played). */
-export type Phase = 'idle' | 'loading' | 'stuck' | 'talking' | 'listening' | 'picking' | 'thinking' | 'done';
+/**
+ * `asking`: the browser is showing its microphone pop-up and waiting for an answer.
+ * `stuck`: Mibo's voice for this lesson could not be loaded (offline before it was ever played).
+ */
+export type Phase = 'idle' | 'loading' | 'asking' | 'stuck' | 'talking' | 'listening' | 'picking' | 'thinking' | 'done';
 export type LessonUi = {
   phase: Phase; step: number; ex: Exercise | null; stars: number;
   pick: Pick | null;       // the picture game on screen
@@ -231,6 +234,7 @@ export function useLesson(puppet: Puppet, opts: {
       alive();
       // without his voice the lesson would race through in silence: stop and say so instead
       if (!loaded) { set({ phase: 'stuck' }); return; }
+      if (opts.listen && (await micPermission()) === 'prompt') set({ phase: 'asking' });
       const useMic = opts.listen && await enableMic();
       alive();
       set({ phase: 'talking', mic: useMic });

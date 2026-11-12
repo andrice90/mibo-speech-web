@@ -211,6 +211,8 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
 
 /* ---- PIN and the grown-up zone */
 .pinpad { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.pinpad h2 { min-height: 26px; }
+.pin-hint { min-height: 60px; display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 20px; }
 .pin-dots { display: flex; gap: 14px; margin: 6px 0; }
 .pin-dots i { width: 18px; height: 18px; border-radius: 9px; border: 2.5px solid var(--lavender-deep); background: #fff; }
 .pin-dots i.on { background: var(--lavender-deep); }
@@ -266,3 +268,15 @@ button.lesson:active, .lesson .main:active { transform: scale(0.98); }
   .pin-keys button { height: 58px; }
   .title-block { padding: 12px 52px 0; }
 }
+
+/* ---- first use */
+.steps { display: flex; justify-content: center; gap: 8px; }
+.steps i { width: 10px; height: 10px; border-radius: 5px; background: #e6dccb; transition: width 150ms; }
+.steps i.now { width: 26px; background: var(--peach-deep); }
+.steps i.done { background: var(--mint-deep); }
+.mic-switch { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.mic-help { font-size: 13px; line-height: 18px; color: var(--soft); padding: 0 4px; }
+.mic-help b { font-weight: 700; }
+.mic-help.ask { background: var(--butter); color: var(--ink); border-radius: 14px; padding: 10px 12px; font-size: 14px; line-height: 19px; }
+.mic-help.blocked { background: var(--peach); color: #8a3a1c; border-radius: 14px; padding: 10px 12px; font-size: 14px; line-height: 19px; }
+.mic-help.ok { color: #1f6f52; font-weight: 600; }

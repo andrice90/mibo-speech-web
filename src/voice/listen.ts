@@ -24,6 +24,33 @@ let micReady: Promise<boolean> | null = null;
 
 export const canListen = () => !!navigator.mediaDevices?.getUserMedia;
 
+export type MicState = 'granted' | 'prompt' | 'denied' | 'unknown';
+/** Whether the browser has already been told it may use the microphone ("unknown" where it will not say). */
+export async function micPermission(): Promise<MicState> {
+  try {
+    const p = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+    return p.state as MicState;
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
+ * Asks the browser for the microphone now, so its permission pop-up appears
+ * while the grown-up is looking for it, then lets go again. Nothing is
+ * recorded. Resolves true if the microphone may be used.
+ */
+export async function askForMic(): Promise<boolean> {
+  if (!canListen()) return false;
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    s.getTracks().forEach(t => t.stop());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Asks for the microphone once per visit. */
 export function enableMic(): Promise<boolean> {
   micReady ??= (async () => {

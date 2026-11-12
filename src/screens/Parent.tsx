@@ -9,6 +9,7 @@ import { allResults, summarise, wordsToBringBack } from '../lesson/results';
 import { go, goHome } from '../lib/router';
 import { lock, setPin, validPin } from '../lib/zone';
 import { Bubble, Card, Column, Dialog } from '../ui/kit';
+import { MicSwitch } from '../ui/MicSwitch';
 import { PinPad } from '../ui/PinPad';
 import { C } from '../ui/theme';
 
@@ -125,10 +126,7 @@ export function Parent() {
         {settings && !newPin && (
           <Dialog onClose={() => setSettings(false)}>
             <h2>Settings</h2>
-            <button type="button" className="check mic" role="switch" aria-checked={hear} onClick={() => { saveConsent(!hear); setHear(!hear); }}>
-              <span className={`box${hear ? ' on' : ''}`}>{hear && '✓'}</span>
-              <span>🎤 Let Mibo listen (on this device only)</span>
-            </button>
+            <div style={{ alignSelf: 'stretch', textAlign: 'left' }}><MicSwitch on={hear} onChange={v => { saveConsent(v); setHear(v); }} /></div>
             <div className="setting" style={{ alignSelf: 'stretch' }}>
               <span>{pinSaved ? 'PIN changed ✓' : 'Grown-up PIN'}</span>
               <button type="button" className="link" onClick={() => { setPinSaved(false); setNewPin({ first: '' }); }}>Change</button>
@@ -147,7 +145,8 @@ export function Parent() {
         )}
         {newPin && (
           <Dialog onClose={() => setNewPin(null)}>
-            <PinPad key={newPin.first ? 'again' : 'first'} title={newPin.first ? 'Type it once more' : 'Choose a new PIN'}
+            <PinPad key={newPin.first ? 'again' : 'first'} title={newPin.first ? 'Confirm PIN' : 'Choose a new PIN'}
+              hint={newPin.first ? 'Enter the same four digits again.' : 'Four digits.'}
               onEntered={async pin => {
                 if (!newPin.first) { if (!validPin(pin)) return false; setNewPin({ first: pin }); return true; }
                 if (pin !== newPin.first) { setNewPin({ first: '' }); return false; }

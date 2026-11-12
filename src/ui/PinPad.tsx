@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 /**
  * A four-digit keypad. `onEntered` gets the PIN once four digits are in and
  * answers whether to accept it; a refusal shakes the dots and clears them.
+ * The title and hint take a fixed amount of room, so the keys stay in the
+ * same place when one PIN step follows another (choose, then confirm).
  */
 export function PinPad({ title, hint, onEntered }: { title: string; hint?: string; onEntered: (pin: string) => Promise<boolean> | boolean }) {
   const [pin, setPinValue] = useState('');
@@ -33,7 +35,7 @@ export function PinPad({ title, hint, onEntered }: { title: string; hint?: strin
   return (
     <div className="pinpad">
       <h2>{title}</h2>
-      {hint && <p className="soft">{hint}</p>}
+      <p className="soft pin-hint">{hint ?? ''}</p>
       <div className={`pin-dots${bad ? ' bad' : ''}`} aria-label={`${pin.length} of 4 digits entered`}>
         {[0, 1, 2, 3].map(i => <i key={i} className={i < pin.length ? 'on' : ''} />)}
       </div>
