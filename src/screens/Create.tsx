@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { firebaseReady } from '../ai/firebase';
+import { cloudError, firebaseReady } from '../ai/firebase';
 import { generatePlan } from '../ai/plan';
 import { speak } from '../ai/tts';
 import { newLessonId, saveCustomLesson, type CustomLesson } from '../lesson/custom';
@@ -46,8 +46,7 @@ export function Create({ params }: { params: Record<string, string> }) {
     } catch (e) {
       console.warn('[plan]', e);
       if (!here.current) return;
-      const msg = (e as Error).message;
-      setError(/dream up|Firebase/.test(msg) ? msg : 'Mibo could not reach the cloud to plan that lesson. Check the connection and try again.');
+      setError(cloudError(e, 'Mibo could not reach the cloud to plan that lesson. Check the connection and try again.'));
       setStage('error');
     }
   };
@@ -80,10 +79,7 @@ export function Create({ params }: { params: Record<string, string> }) {
       console.warn('[voice]', e);
       keys.forEach(k => void deleteAudio(k));
       if (!here.current) return;
-      const msg = (e as Error).message;
-      setError(/out of space/.test(msg) ? msg : (e as { customErrorData?: { status?: number } }).customErrorData?.status === 429
-        ? "Mibo's voice has reached its free limit for now. Wait a few minutes and try again."
-        : "Mibo's voice failed just now. Try again.");
+      setError(cloudError(e, "Mibo's voice failed just now. Try again."));
       setStage('review');
     }
   };

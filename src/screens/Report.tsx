@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { DEVICE_LABEL, deviceAiStatus, type DeviceAi } from '../ai/device';
-import { firebaseReady } from '../ai/firebase';
+import { cloudError, firebaseReady } from '../ai/firebase';
 import { writeNotes, type Notes } from '../ai/report';
 import { allResults, clearResults, summarise, wordsToBringBack } from '../lesson/results';
 import { go } from '../lib/router';
@@ -44,10 +44,9 @@ export function Report() {
       setNotes(n); writeJson(KEY, n);
     } catch (e) {
       console.warn('[notes]', e);
-      const msg = (e as Error).message;
-      setError(/could not write|Firebase/.test(msg) ? msg : where === 'device'
+      setError(where === 'device' && !/^Mibo/.test((e as Error).message)
         ? 'The on-device model could not write the notes just now. Try again in a moment.'
-        : 'Mibo could not reach the cloud just now. Check the connection and try again.');
+        : cloudError(e, 'Mibo could not reach the cloud just now. Check the connection and try again.'));
     } finally {
       setBusy(null); setDownload(null);
       void deviceAiStatus().then(setDevice);

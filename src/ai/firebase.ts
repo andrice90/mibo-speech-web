@@ -71,3 +71,15 @@ export const MODELS = {
 
 export const withTimeout = <T,>(p: Promise<T>, ms: number, what: string): Promise<T> =>
   Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`${what} timed out`)), ms))]);
+
+/** A sentence for the grown-up when a cloud call fails; setup problems are named, everything else gets `fallback`. */
+export function cloudError(e: unknown, fallback: string): string {
+  const status = (e as { customErrorData?: { status?: number } }).customErrorData?.status;
+  const msg = (e as Error)?.message ?? '';
+  if (status === 401 || status === 403 || /App Check|appCheck/.test(msg)) {
+    return 'Firebase refused this device (App Check). If you are testing, register the debug token printed in the browser console, then try again.';
+  }
+  if (status === 429) return 'The free limit for the cloud has been reached for now. Wait a few minutes and try again.';
+  if (/^(Mibo could not|Making lessons needs|Mibo\'s notes need|This device is out of space)/.test(msg)) return msg;
+  return fallback;
+}
