@@ -18,13 +18,13 @@ A record of how a small child's speech practice is going should not leave the fa
 |---|---|---|---|
 | **Mibo's notes**: how practice is going, where the child struggled, what to focus on next | On the device | `ONLY_ON_DEVICE` (Gemini Nano) | The practice log. It is not sent anywhere. |
 | **Next lesson plan**, tuned by the notes | Cloud | `gemini-3.8-flash` | A short topic and the words to bring back, both shown to the grown-up first |
-| **Mibo's voice** for the new lesson | Cloud | `gemini-3.1-flash-tts-preview` (voice Leda) | The lesson lines the grown-up approved |
+| **Mibo's voice** for the new lesson | Cloud | `gemini-3.8-flash-lite-tts` (voice Leda), with `gemini-3.8-flash-tts` as the fallback when it is busy | The lesson lines the grown-up approved |
 
 The two halves form one loop. The on-device model reads the log and suggests lesson ideas ("s words about clothes"). Plain code picks the words that took more than one go. The grown-up reviews both and sends them to the cloud, which plans the lesson, writes a cheer for each word, and voices every line. All of that is saved on the device, with a template for each word, so the kid zone can play and check the new lesson with no AI.
 
 On a device with no built-in model, the notes can fall back to the cloud (`PREFER_ON_DEVICE`), but only when the grown-up agrees each time, after seeing what would be sent: the counts, never audio and never a name. The notes are tagged with where they were actually written.
 
-Code map: every model call is in [`src/ai/`](src/ai) (`report.ts`, `plan.ts`, `tts.ts`, setup in `firebase.ts`). The zones are in [`src/lib/zone.ts`](src/lib/zone.ts). The listening checks are in [`src/voice/`](src/voice) (`judge.ts`, `wordcheck.ts`).
+Code map: every model call is in [`src/ai/`](src/ai) (`report.ts`, `plan.ts`, `tts.ts`, setup in `firebase.ts`). The zones are in [`src/lib/zone.ts`](src/lib/zone.ts). The listening checks are in [`src/voice/`](src/voice) (`vad.ts`, `judge.ts`, `wordcheck.ts`).
 
 ## How listening works (no model)
 
@@ -49,6 +49,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # type-check and build to dist/
 npm run preview    # serve the built app
+npm test           # listening and WAV tests (Node 22 or later)
 ```
 
 Without `.env.local` the app still runs: the five built-in lessons play in full, and the grown-up zone says that notes and new lessons need the setup.
@@ -57,9 +58,21 @@ Without `.env.local` the app still runs: the five built-in lessons play in full,
 
 On-device inference needs Chrome 139 or later on a desktop, with `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` enabled. The model is a large one-time download; the app starts it when you first ask for notes and shows progress.
 
-### Hosting
+### Hosting (Firebase)
 
-The build is a static site with hash routing, so any static host works (Firebase Hosting, Cloudflare Pages): build command `npm run build`, output folder `dist`, with the `VITE_*` values set as build variables. `firebase.json` is included for Firebase Hosting. Microphone access needs HTTPS (or localhost).
+The build is a static site with hash routing. `firebase.json` serves `dist` with an SPA fallback to `index.html`, and makes sure `index.html`, the service worker (`sw.js`) and the manifest are never cached stale; the hashed files under `assets/` are cached for a year. Microphone access needs HTTPS, which Firebase Hosting gives you.
+
+```bash
+npm install -g firebase-tools
+firebase login
+firebase use --add            # pick your project (or edit the id in .firebaserc)
+npm run build                 # with the VITE_* values in .env.local
+firebase deploy --only hosting
+```
+
+Before the first deploy, add both hosting domains, `YOUR-PROJECT.web.app` and `YOUR-PROJECT.firebaseapp.com`, to the reCAPTCHA Enterprise key that App Check uses (step 5 above), and set `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` in the build. Without that, the cloud calls fail on the hosted app while the built-in lessons still play. The app does not use Firebase Auth, so there are no authorized domains to add.
+
+`firebase emulators:start --only hosting` serves the same build locally with the same headers.
 
 ## What was built for the hackathon
 

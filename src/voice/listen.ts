@@ -12,6 +12,7 @@
  * a real pause, so several goes ("seal... seal!") land in one window.
  */
 import { audio } from './player';
+import { TryWatch, type VadConfig } from './vad';
 
 export type Heard = { samples: Float32Array; sr: number; speech: boolean };
 /** `arm()`: Mibo has finished talking; only what comes after counts. */
@@ -19,6 +20,8 @@ export type Listening = { done: Promise<Heard>; stop: () => void; arm: () => voi
 
 let stream: MediaStream | null = null;
 let input: MediaStreamAudioSourceNode | null = null;
+/** The context the microphone is joined to: Mibo's own, or (Firefox) one at the microphone's sample rate. */
+let cap: AudioContext | null = null;
 let worklet: Promise<boolean> | null = null;
 let micReady: Promise<boolean> | null = null;
 
@@ -60,9 +63,21 @@ export function enableMic(): Promise<boolean> {
     });
     const c = audio();
     if (c.state !== 'running') await c.resume().catch(() => {});
-    input = c.createMediaStreamSource(stream);
-    worklet = c.audioWorklet
-      ? c.audioWorklet.addModule(`${import.meta.env.BASE_URL}rec-worklet.js`).then(() => true, () => false)
+    try {
+      input = c.createMediaStreamSource(stream);
+      cap = c;
+    } catch (e) {
+      // Firefox will not join a microphone to a context running at another sample rate
+      const rate = stream.getAudioTracks()[0]?.getSettings().sampleRate;
+      console.warn('[mic] own context for the microphone:', (e as Error).message, rate);
+      cap = new AudioContext(rate ? { sampleRate: rate } : {});
+      await cap.resume().catch(() => {});
+      input = cap.createMediaStreamSource(stream);
+    }
+    const settings = stream.getAudioTracks()[0]?.getSettings();
+    console.log(`[mic] on: context ${cap.sampleRate} Hz, microphone ${settings?.sampleRate ?? '?'} Hz`);
+    worklet = cap.audioWorklet
+      ? cap.audioWorklet.addModule(`${import.meta.env.BASE_URL}rec-worklet.js`).then(() => true, () => false)
       : Promise.resolve(false);
     await worklet;
     return true;
@@ -74,7 +89,8 @@ export function enableMic(): Promise<boolean> {
 export function releaseMic() {
   stream?.getTracks().forEach(t => t.stop());
   try { input?.disconnect(); } catch { /* fine */ }
-  stream = null; input = null; micReady = null; worklet = null;
+  if (cap && cap !== audio()) void cap.close().catch(() => {});
+  stream = null; input = null; micReady = null; worklet = null; cap = null;
 }
 
 /**
@@ -82,24 +98,31 @@ export function releaseMic() {
  * call `arm()` when he stops. `onLevel` gets 0..1 about 20 times a second.
  * Ends after `pause` seconds of quiet once the child has spoken, after
  * `maxTry` seconds of trying, or after `maxWait` seconds with no speech.
+ * Speech is found by vad.ts; `vad` overrides its numbers for this try.
  */
 export function listen(opts: {
-  onLevel?: (v: number) => void; armed?: boolean; maxWait?: number; maxTry?: number; pause?: number;
+  onLevel?: (v: number) => void; armed?: boolean; maxWait?: number; maxTry?: number; pause?: number; vad?: Partial<VadConfig>;
 } = {}): Listening {
   const { onLevel, maxWait = 6, maxTry = 8, pause = 1.2 } = opts;
-  const c = audio(), sr = c.sampleRate;
+  const c = cap ?? audio(), sr = c.sampleRate;
+  const watch = new TryWatch(sr, { maxWait, maxTry, pause }, opts.vad);
   const chunks: Float32Array[] = [];
-  let seen = 0, armedAt = -1, floor = -55, startAt = -1, quietSince = -1, stopped = false;
+  let seen = 0, stopped = false;
   let wantArm = opts.armed !== false;
   let finish: (h: Heard) => void = () => {};
   const done = new Promise<Heard>(res => { finish = res; });
   let node: AudioNode | null = null, sink: GainNode | null = null;
+  // a phone can suspend the context while it switches the speaker to the microphone's audio mode
+  if (c.state !== 'running') void c.resume().catch(() => {});
 
   const end = (speech: boolean) => {
     if (stopped) return;
     stopped = true;
     try { if (node) { input?.disconnect(node); node.disconnect(); } sink?.disconnect(); } catch { /* fine */ }
     onLevel?.(0);
+    // numbers only, for tuning against real sessions (never audio)
+    console.log(`[mic] ${speech ? 'heard' : 'nothing'}: ${watch.summary()}${seen ? '' : ', NO AUDIO ARRIVED'}`);
+    const armedAt = watch.armedTime;
     if (!speech || armedAt < 0) { finish({ samples: new Float32Array(0), sr, speech: false }); return; }
     const all = new Float32Array(seen);
     let at = 0;
@@ -113,18 +136,10 @@ export function listen(opts: {
     if (stopped) return;
     chunks.push(ch);
     seen += ch.length;
-    const t = seen / sr;
-    if (armedAt < 0) { if (wantArm) armedAt = t; else return; }   // Mibo is still talking
-    let sum = 0;
-    for (let i = 0; i < ch.length; i++) sum += ch[i] * ch[i];
-    const level = 10 * Math.log10(sum / ch.length + 1e-12);        // dBFS
-    if (level < floor) floor = 0.9 * floor + 0.1 * level;          // settles on the room once Mibo's voice is gone
-    else floor = Math.min(floor + 0.02, -35);                      // and drifts up slowly if the room gets louder
-    const speaking = level > Math.max(floor + 14, -50);
-    if (speaking) { if (startAt < 0) startAt = t; quietSince = -1; } else if (startAt >= 0 && quietSince < 0) quietSince = t;
-    onLevel?.(Math.max(0, Math.min(1, (level - floor) / 35)));
-    if (startAt >= 0 && ((quietSince >= 0 && t - quietSince > pause) || t - armedAt > maxTry)) end(true);
-    else if (startAt < 0 && t - armedAt > maxWait) end(false);
+    const level = watch.push(ch, wantArm);
+    if (watch.armedTime >= 0) onLevel?.(level);
+    if (watch.state === 'heard') end(true);
+    else if (watch.state === 'nothing') end(false);
   };
 
   (async () => {
@@ -150,5 +165,12 @@ export function listen(opts: {
     }
   })();
 
-  return { done, stop: () => { end(startAt >= 0); }, arm: () => { wantArm = true; } };
+  const arm = () => {
+    if (wantArm && watch.armedTime >= 0) return;
+    wantArm = true;
+    // if the microphone sends nothing at all (a suspended context), give up instead of waiting forever
+    setTimeout(() => { if (!stopped && watch.armedTime < 0) end(false); }, (maxWait + 1) * 1000);
+  };
+  if (wantArm) arm();
+  return { done, stop: () => { end(watch.startAt >= 0); }, arm };
 }

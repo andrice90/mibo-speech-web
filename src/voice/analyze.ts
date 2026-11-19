@@ -290,6 +290,35 @@ export function pcm16ToFloat(bytes: Uint8Array): Float32Array {
   return out;
 }
 
+/**
+ * The 16-bit PCM samples and sample rate inside a WAV file, reading its chunks
+ * rather than assuming a 44-byte header (some writers add LIST or fact chunks).
+ * Null when the bytes are not a 16-bit PCM WAV.
+ */
+export function wavToPcm(bytes: Uint8Array): { pcm: Uint8Array; sr: number; channels: number } | null {
+  const tag = (o: number) => String.fromCharCode(bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]);
+  if (bytes.length < 12 || tag(0) !== 'RIFF' || tag(8) !== 'WAVE') return null;
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let sr = 0, channels = 1, bits = 0;
+  for (let o = 12; o + 8 <= bytes.length;) {
+    const id = tag(o);
+    let size = dv.getUint32(o + 4, true);
+    const body = o + 8;
+    if (id === 'fmt ' && body + 16 <= bytes.length) {
+      channels = dv.getUint16(body + 2, true);
+      sr = dv.getUint32(body + 4, true);
+      bits = dv.getUint16(body + 14, true);
+    } else if (id === 'data') {
+      // a streamed WAV can leave the size at 0 or 0xFFFFFFFF: then the data runs to the end
+      if (!size || body + size > bytes.length) size = bytes.length - body;
+      if (!sr || bits !== 16) return null;
+      return { pcm: bytes.subarray(body, body + size - (size % 2)), sr, channels };
+    }
+    o = body + size + (size % 2);
+  }
+  return null;
+}
+
 /** Wrap raw mono 16-bit PCM in a WAV header so any player can open it. */
 export function pcmToWav(pcm: Uint8Array, sr: number): Uint8Array {
   const out = new Uint8Array(44 + pcm.length), dv = new DataView(out.buffer);

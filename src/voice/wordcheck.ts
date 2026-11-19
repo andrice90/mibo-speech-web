@@ -20,6 +20,8 @@
  */
 import templatesJson from '../lesson/word-templates.json';
 import { mfcc } from './features';
+import { HEAR } from './judge';
+import { highPass } from './vad';
 
 export type WordVerdict = {
   speech: boolean;
@@ -47,7 +49,7 @@ const HOP_S = 0.01, WIN_S = 0.02;
  * joined (a word said chunk by chunk stays one run), runs under 150 ms
  * are dropped. The same windowing as judgeTry in judge.ts.
  */
-export function speechRuns(x: Float32Array, sr: number): [number, number][] {
+export function speechRuns(x: Float32Array, sr: number, minRangeDb = 15): [number, number][] {
   const hop = Math.round(HOP_S * sr), win = Math.round(WIN_S * sr);
   const dbs: number[] = [];
   for (let s = 0; s + win <= x.length; s += hop) {
@@ -59,7 +61,7 @@ export function speechRuns(x: Float32Array, sr: number): [number, number][] {
   const sorted = [...dbs].sort((a, b) => a - b);
   const pct = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
   const floor = pct(0.1), peak = pct(0.98);
-  if (peak - floor < 15) return [];
+  if (peak - floor < minRangeDb) return [];
   const gate = Math.max(floor + 10, peak - 35);
   const runs: [number, number][] = [];
   for (let i = 0, s = -1, quiet = 0; i <= dbs.length; i++) {
@@ -145,7 +147,8 @@ export function judgeWord(x: Float32Array, sr: number, target: string, extra: Te
   // a made lesson's word is compared with that lesson's other words; a built-in twisty word with the other built-in ones
   const made = !!extra[target];
   const all: Templates = made ? extra : TEMPLATES, words = Object.keys(all);
-  const runs = speechRuns(x, sr);
+  // a child's try is found on a copy without hum or DC offset, with the softer bar children need
+  const runs = speechRuns(highPass(x, sr, HEAR.rumbleHz), sr, HEAR.minRangeDb);
   if (!runs.length || !all[target]) return { speech: false, match: null };
   const pad = Math.round(0.05 * sr);
   const candidates = runs.map(([a, b]) => x.subarray(Math.max(0, a - pad), Math.min(x.length, b + pad)));
