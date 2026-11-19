@@ -16,6 +16,8 @@
  * one tap (PROJECT #6); thresholds come from calibration recordings.
  */
 
+import { highPass } from './vad';
+
 export type Heard = 's' | 'th' | 'sh' | 'z' | 'stop' | 'none';
 /** The sounds a lesson can ask for. */
 export type Target = 's' | 'th' | 'sh' | 'z';
@@ -30,6 +32,25 @@ export type Verdict = {
 
 const HOP = 0.01, WIN = 0.02;
 const VOWEL_RUN = 5;   // frames (50 ms)
+
+/**
+ * The numbers that decide whether a try holds speech at all, in one place
+ * for tuning. Children's voices are higher and softer than the adult and TTS
+ * voices the check was first set on: a 4 to 7 year old speaks at 250 to 450 Hz
+ * and higher when excited, so voicing is looked for up to 600 Hz (it was 400).
+ */
+export const HEAR = {
+  /** Hum, handling rumble and DC offset are taken out below this before anything is measured (Hz). */
+  rumbleHz: 80,
+  /** Highest voice pitch looked for (Hz). */
+  maxPitchHz: 600,
+  /** Lowest voice pitch looked for (Hz). */
+  minPitchHz: 75,
+  /** A try counts as speech when its loud part is this far above its quiet part (dB). It was 15. */
+  minRangeDb: 12,
+  /** Frames this close to the quietest ones are the room, whose noise is taken out of the hiss (dB). */
+  roomDb: 3,
+};
 
 function fft(re: Float64Array, im: Float64Array) {
   const n = re.length;
@@ -61,7 +82,7 @@ function frames(x: Float32Array, sr: number) {
   const re = new Float64Array(N), im = new Float64Array(N);
   const binHz = sr / N, lo = Math.ceil(1000 / binHz), hi = Math.min(N / 2 - 1, Math.floor(Math.min(11000, sr / 2 - 500) / binHz));
   const split = Math.round(2500 / binHz);
-  const lagLo = Math.floor(sr / 400), lagHi = Math.floor(sr / 75);
+  const lagLo = Math.floor(sr / HEAR.maxPitchHz), lagHi = Math.floor(sr / HEAR.minPitchHz);
   const out: F[] = [];
   for (let s = 0; s + win <= x.length; s += hop) {
     let e = 0, mean = 0;
@@ -108,7 +129,7 @@ export function judge(x: Float32Array, sr: number, target: Target, kind: Kind): 
   const dbs = fr.map(f => f.db);
   const floor = pct(dbs, 0.1), peak = pct(dbs, 0.98);
   const speechGate = Math.max(floor + 12, peak - 40);
-  const speech = fr.some(f => f.db > speechGate) && peak - floor > 15;
+  const speech = fr.some(f => f.db > speechGate) && peak - floor > HEAR.minRangeDb;
   if (!speech) return { heard: 'none', match: null, speech: false };
 
   const vowel = (f: F) => f.voiced && f.hf < 0.3 && f.db > speechGate;
@@ -157,9 +178,17 @@ export function judge(x: Float32Array, sr: number, target: Target, kind: Kind): 
   let levelDb = 0, voiced = 0;
   for (let i = a; i < b; i++) { for (let k = 0; k < n; k++) avg[k] += fr[i].spec[k]; levelDb += fr[i].db; voiced += +fr[i].voiced; }
   levelDb /= b - a;
+  for (let k = 0; k < n; k++) avg[k] /= b - a;
+  // Take the room's own noise out of the hiss first. A child's /s/ is soft, so the room fills in the
+  // low and middle bins, which flattens the spectrum and made a soft /s/ read as /θ/. Clean
+  // recordings (the calibration set) have next to no room noise, so this leaves them as they were.
+  const room = new Float64Array(n);
+  let quiet = 0;
+  for (const f of fr) if (!f.voiced && f.db <= floor + HEAR.roomDb) { quiet++; for (let k = 0; k < n; k++) room[k] += f.spec[k]; }
+  if (quiet >= 5) for (let k = 0; k < n; k++) avg[k] = Math.max(avg[k] - room[k] / quiet, avg[k] * 0.02);
   let tot = 0, m1 = 0, logSum = 0, pk = 0, pkv = 0;
   for (let k = 0; k < n; k++) {
-    const hz = (k + lo) * binHz, p = avg[k] / (b - a) + 1e-14;
+    const hz = (k + lo) * binHz, p = avg[k] + 1e-14;
     tot += p; m1 += hz * p; logSum += Math.log(p);
     // smoothed peak (±3 bins) so a single spike does not win
     let sm = 0;
@@ -205,7 +234,8 @@ export type TryVerdict = Verdict & { words: Verdict[] };
  * if any of them has the target sound. A child often needs a couple of goes,
  * and grown-ups chat in between; one good one is a pass.
  */
-export function judgeTry(x: Float32Array, sr: number, target: Target, kind: Kind): TryVerdict {
+export function judgeTry(raw: Float32Array, sr: number, target: Target, kind: Kind): TryVerdict {
+  const x = highPass(raw, sr, HEAR.rumbleHz);
   const hop = Math.round(HOP * sr), win = Math.round(WIN * sr);
   const dbs: number[] = [];
   for (let s = 0; s + win <= x.length; s += hop) {
@@ -215,7 +245,7 @@ export function judgeTry(x: Float32Array, sr: number, target: Target, kind: Kind
   }
   if (dbs.length < 10) return { heard: 'none', match: null, speech: false, words: [] };
   const floor = pct(dbs, 0.1), peak = pct(dbs, 0.98);
-  if (peak - floor < 15) return { heard: 'none', match: null, speech: false, words: [] };
+  if (peak - floor < HEAR.minRangeDb) return { heard: 'none', match: null, speech: false, words: [] };
   // loud-enough runs, joined across gaps under 250 ms, kept if over 150 ms long
   const gate = Math.max(floor + 10, peak - 35);
   const runs: [number, number][] = [];

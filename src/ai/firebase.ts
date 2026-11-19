@@ -65,8 +65,10 @@ export const MODELS = {
   small: 'gemini-3.5-flash-lite',
   /** Writes new lesson plans. */
   plan: 'gemini-3.8-flash',
-  /** Mibo's voice. */
-  tts: 'gemini-3.1-flash-tts-preview',
+  /** Mibo's voice. gemini-3.1-flash-tts-preview shut down on Nov 17 2026; this is its listed replacement. */
+  tts: 'gemini-3.8-flash-lite-tts',
+  /** Mibo's voice when the first model is busy: the bigger 3.8 TTS model, same voices and request shape. */
+  ttsBusy: 'gemini-3.8-flash-tts',
 } as const;
 
 export const withTimeout = <T,>(p: Promise<T>, ms: number, what: string): Promise<T> =>
