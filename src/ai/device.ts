@@ -2,7 +2,7 @@
  * The on-device model (Gemini Nano through Chrome's Prompt API), as Firebase
  * AI Logic's hybrid inference uses it. This module only reports whether the
  * browser has it and warms it up; the prompts themselves go through
- * `getGenerativeModel(ai, { mode: InferenceMode.… })` in reply.ts and report.ts.
+ * `getGenerativeModel(ai, { mode: InferenceMode.… })` in report.ts.
  */
 import type { LanguageModelCreateOptions } from 'firebase/ai';
 
