@@ -67,19 +67,9 @@ The zones are checked in code as well as in the screens: `src/ai/firebase.ts` re
 
 App Check protects every AI Logic call, with reCAPTCHA Enterprise on the hosted app and a registered debug token for local testing.
 
-## The rewritten back end
+## Project history
 
-Mibo started as an iOS/Expo app for an earlier hackathon, and that app ran its AI on a server. This version has no server.
-
-| | Earlier iOS app | This web app |
-|---|---|---|
-| Where AI runs | Expo API routes on a server (`/api/reply`, `/api/lesson-plan`, `/api/lesson-voice`) holding provider keys | The browser, through Firebase AI Logic. No server, no keys of our own |
-| Live replies during a lesson | A cloud model wrote a new line after each try | Removed: lessons use no model at all |
-| Lesson plans | Meta Model API | `gemini-3.8-flash` through AI Logic |
-| Mibo's voice | Gemini TTS through OpenRouter | Gemini TTS through AI Logic |
-| Notes on the child's progress | None | Gemini Nano on the device |
-| Abuse protection | Server-side keys | App Check (reCAPTCHA Enterprise) |
-| Hosting | App Store build plus a server | Static files on Firebase Hosting, free Spark plan |
+Mibo started as an iOS/Expo app and puppet animation I have been working on for a few weeks. For the #BuildHybridAI hackathon: the back-end was completely re-written to utilize Firebase hosting and AI inference. The front-end was ported to a PWA that runs best in the Chrome browser, along with multiple UI improvements and additional screens for the Lesson Review features that use on-device models.
 
 Code map: every model call is in [`src/ai/`](src/ai): [`report.ts`](src/ai/report.ts) (notes, on device), [`plan.ts`](src/ai/plan.ts) (lesson plans), [`tts.ts`](src/ai/tts.ts) (voice), [`device.ts`](src/ai/device.ts) (Nano availability), setup and retries in [`firebase.ts`](src/ai/firebase.ts). The zones are in [`src/lib/zone.ts`](src/lib/zone.ts). The listening checks are in [`src/voice/`](src/voice) (`vad.ts`, `judge.ts`, `wordcheck.ts`).
 
